@@ -1,4 +1,3 @@
-
 """
 Strcuture of the data stored in the storage is
 {
@@ -12,14 +11,17 @@ Strcuture of the data stored in the storage is
 global storage
 global strategy_context
 
+
 def init():
     global storage, strategy_context
     storage = {}
     strategy_context = {}
 
+
 def get_db():
     global storage, strategy_context
     return storage
+
 
 def get_st_context():
     global strategy_context

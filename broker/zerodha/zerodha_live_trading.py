@@ -24,7 +24,7 @@ class ZerodhaServiceOnline(TradingService):
     def f(self, ws, ticks):
         # Callback to receive ticks.
         logging.debug("Ticks: {}".format(ticks))
-        #Little approximation on time.
+        # Little approximation on time.
         self._update_tick_data(ticks, datetime.datetime.date.now())
 
     def __on_connect(self, ws, response):
