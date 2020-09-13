@@ -84,6 +84,14 @@ class Strategy:
         else:
             return None
 
+    def to_date(self, trading_data_day):
+        data = []
+        if trading_data_day == None:
+            return data
+        for ohlc in trading_data_day['trading_data']:
+            data.append(ohlc['date'])
+        return data
+
     def to_close(self, trading_data_day):
         data = []
         if trading_data_day == None:
