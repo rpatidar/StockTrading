@@ -28,6 +28,6 @@ class TradingService:
         for callback in self.callbacks:
             callback(tick_data, timestamp)
 
-    def close_day(self, date):
+    def close_day(self, date, instrument_token):
         for callback in self.day_closure_callbacks:
-            callback(date)
+            callback(date, instrument_token)

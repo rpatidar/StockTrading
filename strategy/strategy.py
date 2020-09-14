@@ -2,9 +2,12 @@ from collections import OrderedDict
 import datetime
 from db import storage
 
+import threading
 
 class Strategy:
     def __init__(self):
+
+        self.lock = threading.Lock()
 
         pass
 
@@ -18,7 +21,7 @@ class Strategy:
         date = timestamp.date()
 
         if readonly:
-            script_history = self.market_history.get((script))
+            script_history = self.market_history.get(script)
             return script_history[date] if script_history != None else None
 
         script_history = self.market_history.setdefault(script, {"1minute": OrderedDict, "5minute": OrderedDict()})[
@@ -44,7 +47,7 @@ class Strategy:
     """
 
     def _update_local_cache(self, tick_data, timestamp, agg_type=1):
-
+        self.lock.acquire()
         current_minute, current_date, last_aggregate_time = self.get_previous_aggregate_timestamp(timestamp, agg_type)
         instrument_token = tick_data['instrument_token']
         last_aggregate_date = last_aggregate_time.date()
@@ -57,6 +60,7 @@ class Strategy:
                                                 last_aggregate_date=last_aggregate_date,
                                                 aggregate=last_stock_trading_data[0], agg_type=agg_type,
                                                 last_aggregate_time=last_aggregate_time)
+        self.lock.release()
         pass
 
     def get_previous_aggregate_timestamp(self, timestamp, agg_type=1):

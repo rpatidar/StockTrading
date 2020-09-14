@@ -10,12 +10,13 @@ import copy
 import os
 import matplotlib
 import matplotlib.pyplot as plt
+import threading
 
 class TrendlineStrategy(Strategy):
 
     def __init__(self):
 
-        super(TrendlineStrategy).__init__()
+        super(TrendlineStrategy, self).__init__()
         self.pl = {}
         self.summery_pl = []
         self.scripts_bought = []
@@ -39,7 +40,8 @@ class TrendlineStrategy(Strategy):
         """
         self.market_history = {}
         self.agg_time = 5
-        self.last_closure = {}
+        self.buy_sell_lock = threading.Lock()
+        #self.last_closure = {}
 
     def summary(self):
         print("-----------------Trendline Strategy Summary --------------")
@@ -49,13 +51,13 @@ class TrendlineStrategy(Strategy):
         if not os.path.exists("./tmp/summery"):
             os.mkdir("./tmp/summery")
 
-        file = open("./tmp/summery/trnedline.json", "w")
+        file = open("./tmp/summery/trendline0.json", "w")
         file.write(json.dumps(db.storage.get_st_context(), indent=1, default=str))
         file.close()
-        file = open("./tmp/summery/trnedline1.json", "w")
+        file = open("./tmp/summery/trendline1.json", "w")
         file.write(json.dumps(self.summery_pl, indent=1, default=str))
         file.close()
-        file = open("./tmp/summery/trnedline2.json", "w")
+        file = open("./tmp/summery/trendline2.json", "w")
         file.write(json.dumps(self.pl, indent=1, default=str))
         file.close()
 
@@ -82,122 +84,110 @@ class TrendlineStrategy(Strategy):
         # plt.scatter([f'{x:%Y-%m-%d %H:%M}' for x in final_dates], final_data)
         # plt.show()
 
-    def close_day(self, date):
-        # print("Closing the day" + str(date))
-        self.last_run = {}
-        for script in self.scripts_bought:
-            close_price = self.last_closure[script]
-            previous_strategy_execution_info = db.storage.get_st_context().get(script)
-            if previous_strategy_execution_info != None and previous_strategy_execution_info['buy_ps'] != None:
-                pl = close_price - previous_strategy_execution_info['buy_price']
-                self.sell_line(close_price, pl, date)
-                #self.pl[script] = self.pl.get(script, 0) + pl
-                self.update_pl_summery(previous_strategy_execution_info['buy_price'], script, pl)
-                self.scripts_bought.remove(script)
-                previous_strategy_execution_info['buy_ps'] = None
+    def close_day(self, date, instrument_token):
+        self.last_run[instrument_token] = -1
+        #TODO: Fix the aggregate for the last minute, as of now the data is loaded for the previous candle, 5 minute aggregate before as
+        #Current aggregate might be incomplete.
+        close_price = self.get_trading_history_for_day(instrument_token, date.date(), False, agg_type=self.agg_time)["trading_data"][-1]['close']
+        previous_strategy_execution_info = db.storage.get_st_context().get(instrument_token)
+        if previous_strategy_execution_info != None and previous_strategy_execution_info['buy_ps'] != None:
+            pl = close_price - previous_strategy_execution_info['buy_price']
+            self.sell_line(close_price, pl, date)
+            self.update_pl_summery(previous_strategy_execution_info['buy_price'], instrument_token, pl)
+            previous_strategy_execution_info['buy_ps'] = None
 
     def run(self, tick_datas, riskmanagement, timestamp):
-        # print("Running the Trendline Strategy")
         for tick_data in tick_datas:
             instrument_token = tick_data['instrument_token']
             trading_data = tick_data['ohlc']
             date = timestamp.date();
-
-            #Chaging this to low
-            self.last_closure[instrument_token] = trading_data['low']
-
             self._update_local_cache(tick_data, timestamp, agg_type=self.agg_time)
+            h, raw_trading_data = self.get_simplified_trading_history(date, instrument_token)
 
-            raw0 = self.get_trading_history_for_day(instrument_token, date, False, agg_type=self.agg_time)
-            raw1 = self.get_trading_history_for_day(instrument_token, date, True, agg_type=self.agg_time)
-            raw_trading_data = raw1['trading_data'] if raw1 != None else []
-            if raw0 != None:
-                raw_trading_data = raw_trading_data + raw0['trading_data']
-
-            trading_history0 = self.to_close(raw0)
-            trading_history1 = self.to_close(raw1)
-
-            current_aggregate = []
-            if trading_history1 != None:
-                current_aggregate = current_aggregate + trading_history1
-            if trading_history0 != None:
-                current_aggregate = current_aggregate + trading_history0
-            h = current_aggregate
-
-            # print("******* H=" + str(h))
-
+            #If the aggregates are not updated should we run
             if len(h) <= self.last_run.get(instrument_token, 0):
-                # print("Skipping because of same data")
                 return
 
             self.last_run[instrument_token] = len(h)
             if (len(h) > 5):
-                # Very worse form of implementing it. need to find better mechanism to optimize it.
-                mintrend, minwindows = self.detect_trend(h)
-
-                previous_strategy_execution_info = db.storage.get_st_context().setdefault(instrument_token, {
-                    "buy_ps": None,
-                    "history": []
-                })
-
-                window_count = 0
+                previous_strategy_execution_info = self.get_previous_execution_info(instrument_token)
                 if previous_strategy_execution_info['buy_ps'] == None:
-                    trend_info = {}
-                    for trends in minwindows:
-#                        for trend in trends[:self.numbest]:
-                        for trend in trends:
-                            percentage_change = (trend[1][0] / h[-1]) * 100
-                            # trend[1][0] > 0.20
-                            # print("percentage change=" + str(percentage_change))
-                            if (percentage_change > 0.10 and trend_info.get("slope") == None) or (
-                                    trend_info.get("slope") != None and trend_info.get("slope") < trend[1][0]):
-                                temp_closing_index = trend[0][-1]
-                                if temp_closing_index == len(h) - 3:
-                                    # Record the current trned line info
-                                    trend_info["trendpoints"] = [
-                                        {"price": raw_trading_data[i]['low'], "date": raw_trading_data[i]['date']} for
-                                        i in trend[0]]
-                                    trend_info["slope"] = trend[1][0]
-                                    trend_info['coefficient'] = trend[1][1]
-                                    # print("Found trend closing at the buy_index")
-                        trade_time = raw_trading_data[-1]['date']
-                        two_pm_for_day = trade_time.replace(hour=14, minute=0, second=0, microsecond=0)
-
-                        if trend_info.get('slope') != None :  # and two_pm_for_day > trade_time:
-                            stop_loss = (len(h) - 2) * (trend_info['slope']) + trend_info['coefficient']
-                            if h[-2] < stop_loss:
-                                continue
-                            print(("BUY Time={0}, Price={1:5.2f}").format(str(raw_trading_data[-1]['date']), h[-1]))
-
-                            previous_strategy_execution_info['trend_info'] = trend_info
-                            # Buy_index
-                            previous_strategy_execution_info['buy_ps'] = len(h) - 1
-                            previous_strategy_execution_info['buy_price'] = raw_trading_data[len(h) - 1]['close']
-                            self.scripts_bought.append(instrument_token)
-                            break
+                    bug_signal, trend_info = self.execute_strategy_to_check_buy_signal(h, raw_trading_data)
+                    if bug_signal :  # and two_pm_for_day > trade_time:
+                        self.buy_sell_lock.acquire()
+                        trade_data = raw_trading_data[-1]
+                        print(("BUY Time={0}, Price={1:5.2f}").format(str(trade_data['date']), h[-1]))
+                        previous_strategy_execution_info['trend_info'] = trend_info
+                        previous_strategy_execution_info['buy_ps'] = len(h) - 1
+                        previous_strategy_execution_info['buy_price'] = trade_data['close']
+                        self.buy_sell_lock.release()
                 else:
-                    trend_info = previous_strategy_execution_info['trend_info']
-                    stop_loss = (len(h) - 1) * (trend_info['slope']) + trend_info['coefficient']
-                    stop_loss = 0.995 * stop_loss
-
-                    if stop_loss > h[-1]:
+                    sell_signal, stop_loss = self.check_for_sell_signal(h, previous_strategy_execution_info)
+                    if sell_signal:
+                        self.buy_sell_lock.acquire()
                         buy_ps = h[previous_strategy_execution_info['buy_ps']]
                         pl = stop_loss - h[previous_strategy_execution_info['buy_ps']]
-                        self.sell_line(stop_loss, pl, raw_trading_data[-1]['date'])
-
+                        current_time  = raw_trading_data[-1]['date']
+                        self.sell_line(stop_loss, pl, current_time)
                         previous_strategy_execution_info['history'].append(
-                            {"buy": raw_trading_data[previous_strategy_execution_info["buy_ps"]]['low'],
+                            {"buy": buy_ps,
                              "sell": stop_loss, # raw_trading_data[len(h) - 1]['close'],
                              "trend_info": previous_strategy_execution_info["trend_info"]})
                         previous_strategy_execution_info["buy_ps"] = None
                         previous_strategy_execution_info["trend_info"] = None
-                        self.scripts_bought.remove(instrument_token)
                         self.update_pl_summery(buy_ps, instrument_token, pl)
+                        self.buy_sell_lock.release()
 
-                        # print ("Able to compute the mintrend and minwindows")
-            # print("Executed Trendline strategy")
 
-        # self.my_method()
+    def get_simplified_trading_history(self, date, instrument_token):
+        raw0 = self.get_trading_history_for_day(instrument_token, date, False, agg_type=self.agg_time)
+        raw1 = self.get_trading_history_for_day(instrument_token, date, True, agg_type=self.agg_time)
+        raw_trading_data = raw1['trading_data'] if raw1 != None else []
+        if raw0 != None:
+            raw_trading_data = raw_trading_data + raw0['trading_data']
+        trading_history0 = self.to_close(raw0)
+        trading_history1 = self.to_close(raw1)
+        current_aggregate = []
+        if trading_history1 != None:
+            current_aggregate = current_aggregate + trading_history1
+        if trading_history0 != None:
+            current_aggregate = current_aggregate + trading_history0
+        h = current_aggregate
+        return h, raw_trading_data
+
+    def check_for_sell_signal(self, h, previous_strategy_execution_info):
+        trend_info = previous_strategy_execution_info['trend_info']
+        stop_loss = (len(h) - 1) * (trend_info['slope']) + trend_info['coefficient']
+        stop_loss = 0.995 * stop_loss
+        sell_signal = stop_loss > h[-1]
+        return sell_signal, stop_loss
+
+    def execute_strategy_to_check_buy_signal(self, h, raw_trading_data):
+        mintrend, minwindows = self.detect_trend(h)
+        trend_info = {}
+        for trends in minwindows:
+            for trend in trends:
+                percentage_change = (trend[1][0] / h[-1]) * 100
+                if (percentage_change > 0.10 and trend_info.get("slope") == None) or (
+                        trend_info.get("slope") != None and trend_info.get("slope") < trend[1][0]):
+                    temp_closing_index = trend[0][-1]
+                    if temp_closing_index == len(h) - 3:
+                        # Record the current trend line info
+                        trend_info["trendpoints"] = [
+                            {"price": raw_trading_data[i]['low'], "date": raw_trading_data[i]['date']} for
+                            i in trend[0]]
+                        trend_info["slope"] = trend[1][0]
+                        trend_info['coefficient'] = trend[1][1]
+        bug_signal = trend_info.get('slope') != None and h[-2] > (len(h) - 2) * (trend_info['slope']) + trend_info[
+            'coefficient']
+        return bug_signal, trend_info
+
+    def get_previous_execution_info(self, instrument_token):
+        previous_strategy_execution_info = db.storage.get_st_context().setdefault(instrument_token, {
+            "buy_ps": None,
+            "history": []
+        })
+        return previous_strategy_execution_info
 
     def update_pl_summery(self, buy_ps, instrument_token, pl):
         pl_record = self.pl.get(instrument_token)
