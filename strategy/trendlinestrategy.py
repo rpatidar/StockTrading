@@ -103,7 +103,8 @@ class TrendlineStrategy(Strategy):
             trading_data = tick_data['ohlc']
             date = timestamp.date();
 
-            self.last_closure[instrument_token] = trading_data['close']
+            #Chaging this to low
+            self.last_closure[instrument_token] = trading_data['low']
 
             self._update_local_cache(tick_data, timestamp, agg_type=self.agg_time)
 
@@ -148,13 +149,13 @@ class TrendlineStrategy(Strategy):
                             percentage_change = (trend[1][0] / h[-1]) * 100
                             # trend[1][0] > 0.20
                             # print("percentage change=" + str(percentage_change))
-                            if (percentage_change > 0.05 and trend_info.get("slope") == None) or (
+                            if (percentage_change > 0.10 and trend_info.get("slope") == None) or (
                                     trend_info.get("slope") != None and trend_info.get("slope") < trend[1][0]):
                                 temp_closing_index = trend[0][-1]
-                                if temp_closing_index == len(h) - 2:
+                                if temp_closing_index == len(h) - 3:
                                     # Record the current trned line info
                                     trend_info["trendpoints"] = [
-                                        {"price": raw_trading_data[i]['close'], "date": raw_trading_data[i]['date']} for
+                                        {"price": raw_trading_data[i]['low'], "date": raw_trading_data[i]['date']} for
                                         i in trend[0]]
                                     trend_info["slope"] = trend[1][0]
                                     trend_info['coefficient'] = trend[1][1]
@@ -163,28 +164,29 @@ class TrendlineStrategy(Strategy):
                         two_pm_for_day = trade_time.replace(hour=14, minute=0, second=0, microsecond=0)
 
                         if trend_info.get('slope') != None :  # and two_pm_for_day > trade_time:
-                            stop_loss = (len(h) - 1) * (trend_info['slope']) + trend_info['coefficient']
-                            if h[-1] < stop_loss:
+                            stop_loss = (len(h) - 2) * (trend_info['slope']) + trend_info['coefficient']
+                            if h[-2] < stop_loss:
                                 continue
                             print(("BUY Time={0}, Price={1:5.2f}").format(str(raw_trading_data[-1]['date']), h[-1]))
 
                             previous_strategy_execution_info['trend_info'] = trend_info
                             # Buy_index
                             previous_strategy_execution_info['buy_ps'] = len(h) - 1
-                            previous_strategy_execution_info['buy_price'] = h[len(h) - 1]
+                            previous_strategy_execution_info['buy_price'] = raw_trading_data[len(h) - 1]['close']
                             self.scripts_bought.append(instrument_token)
                             break
                 else:
                     trend_info = previous_strategy_execution_info['trend_info']
                     stop_loss = (len(h) - 1) * (trend_info['slope']) + trend_info['coefficient']
-                    stop_loss = stop_loss
+                    stop_loss = 0.995 * stop_loss
+
                     if stop_loss > h[-1]:
                         buy_ps = h[previous_strategy_execution_info['buy_ps']]
                         pl = stop_loss - h[previous_strategy_execution_info['buy_ps']]
                         self.sell_line(stop_loss, pl, raw_trading_data[-1]['date'])
 
                         previous_strategy_execution_info['history'].append(
-                            {"buy": raw_trading_data[previous_strategy_execution_info["buy_ps"]]['close'],
+                            {"buy": raw_trading_data[previous_strategy_execution_info["buy_ps"]]['low'],
                              "sell": stop_loss, # raw_trading_data[len(h) - 1]['close'],
                              "trend_info": previous_strategy_execution_info["trend_info"]})
                         previous_strategy_execution_info["buy_ps"] = None

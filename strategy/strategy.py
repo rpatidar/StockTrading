@@ -97,7 +97,7 @@ class Strategy:
         if trading_data_day == None:
             return data
         for ohlc in trading_data_day['trading_data']:
-            data.append(ohlc['close'])
+            data.append(ohlc['low'])
         return data
 
     def get_simple_day_history(self, date, instrument_token, last_aggregate_time=None, agg_type=1):
