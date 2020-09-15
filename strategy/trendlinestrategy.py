@@ -354,49 +354,6 @@ class TrendlineStrategy(Strategy):
             minFunc, maxFunc, numdiff_extrema = get_minmax(h)
             return numdiff_extrema(minFunc), numdiff_extrema(maxFunc)
 
-        def get_minmax(h):
-            clarr = np.asarray(h, dtype=np.float64)
-            mom, momacc = self.d_dx(clarr), self.d2_dx2(clarr)
-
-            # print(mom[-10:], momacc[-10:])
-            # numerical derivative will yield prominent extrema points only
-            def numdiff_extrema(func):
-                return [x for x in range(len(mom))
-                        if func(x) and
-                        (mom[
-                             x] == 0 or  # either slope is 0, or it crosses from positive to negative with the closer to 0 of the two chosen or prior if a tie
-                         (x != len(mom) - 1 and (
-                                 mom[x] > 0 and mom[x + 1] < 0 and h[x] >= h[x + 1] or  # mom[x] >= -mom[x+1]
-                                 mom[x] < 0 and mom[x + 1] > 0 and h[x] <= h[
-                                     x + 1]) or  # -mom[x] >= mom[x+1]) or
-                          x != 0 and (mom[x - 1] > 0 and mom[x] < 0 and h[x - 1] < h[x] or  # mom[x-1] < -mom[x] or
-                                      mom[x - 1] < 0 and mom[x] > 0 and h[x - 1] > h[
-                                          x])))]  # -mom[x-1] < mom[x])))]
-
-            return lambda x: momacc[x] > 0, lambda x: momacc[x] < 0, numdiff_extrema
-
-        # def add_trend(h, trend, clr, trend_id=-1):
-        #     t = 0
-        #     for ln in trend[:numbest]:
-        #         if trend_id != -1 and t != trend_id:
-        #             continue
-        #
-        #         t = t + 1
-        #         maxx = ln[0][-1] + 1
-        #         while maxx < len_h:
-        #             ypred = ln[1][0] * maxx + ln[1][1]
-        #             if (h[maxx] > ypred and h[maxx - 1] < ypred or h[maxx] < ypred and h[maxx - 1] > ypred or
-        #                     ypred > max_h + (max_h - min_h) * pctbound or ypred < min_h - (
-        #                             max_h - min_h) * pctbound): break
-        #             maxx += 1
-        #         x_vals = np.array((ln[0][0], maxx))  # plt.gca().get_xlim())
-        #         y_vals = ln[1][0] * x_vals + ln[1][1]
-        #         # if bFirst:
-        #         #     plt.plot([ln[0][0], maxx], y_vals, clr, label=lbl)
-        #         #     bFirst = False
-        #         # else:
-        #         plt.plot([ln[0][0], maxx], y_vals, clr)
-
         divide = list(reversed(range(len_h, -window, -window)))
         rem, divide[0] = window - len_h % window, 0
         if rem == window: rem = 0

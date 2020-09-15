@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 class ZerodhaServiceIntraDay(ZerodhaServiceBase):
     def __init__(self, credential, configuration):
         super(ZerodhaServiceIntraDay, self).__init__(credential, configuration)
-        self.thread_pool_strategy = ThreadPoolExecutor(10)
+        self.thread_pool_strategy = ThreadPoolExecutor(2)
 
     def init_listening(self):
 
@@ -22,7 +22,7 @@ class ZerodhaServiceIntraDay(ZerodhaServiceBase):
                 continue
             instrument_token = instrument_data['instrument_token']
             trades.append(self.thread_pool_strategy.submit(self.execute_strategy_single_datapoint, instrument_token, stock, stock_config));
-            #self.execute_strategy_single_datapoint(instrument_token, stock, stock_config)
+            # self.execute_strategy_single_datapoint(instrument_token, stock, stock_config)
         for t in trades:
             t.result()
         pass
