@@ -12,17 +12,16 @@ global storage
 global strategy_context
 
 
-def init():
-    global storage, strategy_context
-    storage = {}
-    strategy_context = {}
+from utils.objecthelpers import  Singleton
 
+class StorageHandler(metaclass=Singleton):
 
-def get_db():
-    global storage, strategy_context
-    return storage
+    def __init__(self):
+        self.storage = {}
+        self.strategy_context = {}
 
+    def get_db(self):
+        return self.storage
 
-def get_st_context():
-    global strategy_context
-    return strategy_context
+    def get_st_context(self):
+        return self.strategy_context

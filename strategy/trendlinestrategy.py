@@ -3,22 +3,19 @@ import numpy as np
 from strategy.strategy import Strategy
 import datetime
 
-import db.storage
+from db.storage import StorageHandler
 
 import copy
 
 import os
 import matplotlib
 import matplotlib.pyplot as plt
-import threading
 
 class TrendlineStrategy(Strategy):
 
     def __init__(self):
 
         super(TrendlineStrategy, self).__init__()
-        self.pl = {}
-        self.summery_pl = []
         self.scripts_bought = []
         self.tick_history = {}
         from findiff import FinDiff
@@ -40,61 +37,24 @@ class TrendlineStrategy(Strategy):
         """
         self.market_history = {}
         self.agg_time = 5
-        self.buy_sell_lock = threading.Lock()
+
         #self.last_closure = {}
 
-    def summary(self):
-        print("-----------------Trendline Strategy Summary --------------")
-        print("Summary:" + str(self.pl))
-        import json
-        print("Debug Info: ------")
-        if not os.path.exists("./tmp/summery"):
-            os.mkdir("./tmp/summery")
-
-        file = open("./tmp/summery/trendline0.json", "w")
-        file.write(json.dumps(db.storage.get_st_context(), indent=1, default=str))
-        file.close()
-        file = open("./tmp/summery/trendline1.json", "w")
-        file.write(json.dumps(self.summery_pl, indent=1, default=str))
-        file.close()
-        file = open("./tmp/summery/trendline2.json", "w")
-        file.write(json.dumps(self.pl, indent=1, default=str))
-        file.close()
-
-        # TODO: for debugging the graphs 
-        # intresting_instrument_token = 738561
-        # instresing_dates = []
-        # db.storage.get_db()
-        # aggregate1 = self.get_trading_history_for_day(intresting_instrument_token, datetime.datetime(2020, 8, 5).date(), False, agg_type=self.agg_time)
-        # aggregate2 = self.get_trading_history_for_day(intresting_instrument_token, datetime.datetime(2020, 8, 5).date(), True, agg_type=self.agg_time)
-        # final_data = []
-        # if aggregate2 != None:
-        #     final_data = final_data + self.to_close(aggregate2)
-        # if aggregate1 != None:
-        #     final_data = final_data + self.to_close(aggregate1)
-        # final_dates = []
-        # if aggregate2 != None:
-        #     final_dates = final_dates + self.to_date(aggregate2)
-        # if aggregate1 != None:
-        #     final_dates = final_dates + self.to_date(aggregate1)
-        #
-        #
-        # fig = plt.figure(figsize = (18,8))
-        # plt.subplot(1,1,1)
-        # plt.scatter([f'{x:%Y-%m-%d %H:%M}' for x in final_dates], final_data)
-        # plt.show()
 
     def close_day(self, date, instrument_token):
         self.last_run[instrument_token] = -1
         #TODO: Fix the aggregate for the last minute, as of now the data is loaded for the previous candle, 5 minute aggregate before as
         #Current aggregate might be incomplete.
+        sh = StorageHandler()
         close_price = self.get_trading_history_for_day(instrument_token, date.date(), False, agg_type=self.agg_time)["trading_data"][-1]['close']
-        previous_strategy_execution_info = db.storage.get_st_context().get(instrument_token)
-        if previous_strategy_execution_info != None and previous_strategy_execution_info['buy_ps'] != None:
-            pl = close_price - previous_strategy_execution_info['buy_price']
-            self.sell_line(close_price, pl, date)
-            self.update_pl_summery(previous_strategy_execution_info['buy_price'], instrument_token, pl)
-            previous_strategy_execution_info['buy_ps'] = None
+        from db.tradebook import TradeBook
+        tb = TradeBook()
+        open_position  = tb.get_previous_execution_info(instrument_token)
+        if open_position != None and open_position['execution_info']['buy_ps'] != None:
+            pl = close_price - open_position['buy_price']
+            tb.exit("buy", instrument_token, date, close_price, "Trendline", None)
+
+
 
     def run(self, tick_datas, riskmanagement, timestamp):
         for tick_data in tick_datas:
@@ -108,45 +68,35 @@ class TrendlineStrategy(Strategy):
             if len(h) <= self.last_run.get(instrument_token, 0):
                 return
 
+            from db.tradebook import  TradeBook
+            tb = TradeBook()
+
             self.last_run[instrument_token] = len(h)
             if (len(h) > 5):
-                previous_strategy_execution_info = self.get_previous_execution_info(instrument_token)
-                if previous_strategy_execution_info['buy_ps'] == None:
+                open_position_info = tb.get_previous_execution_info(instrument_token)
+                if open_position_info == None: # or previous_strategy_execution_info['buy_ps'] == None:
                     bug_signal, trend_info = self.execute_strategy_to_check_buy_signal(h, raw_trading_data)
                     if bug_signal :  # and two_pm_for_day > trade_time:
-                        self.buy_sell_lock.acquire()
                         trade_data = raw_trading_data[-1]
-                        print(("BUY Time={0}, Price={1:5.2f}").format(str(trade_data['date']), h[-1]))
-                        previous_strategy_execution_info['trend_info'] = trend_info
-                        previous_strategy_execution_info['buy_ps'] = len(h) - 1
-                        previous_strategy_execution_info['buy_price'] = trade_data['close']
-                        self.buy_sell_lock.release()
-                else:
-                    sell_signal, stop_loss = self.check_for_sell_signal(h, previous_strategy_execution_info)
-                    if sell_signal:
-                        self.buy_sell_lock.acquire()
-                        buy_ps = h[previous_strategy_execution_info['buy_ps']]
-                        pl = stop_loss - h[previous_strategy_execution_info['buy_ps']]
+                        tb.enter("buy", instrument_token, trade_data['date'], trade_data['close'],"Trendline",  {"trend_info": trend_info, "buy_ps": len(h) - 1})
+
+                if open_position_info != None:
+                    sell_signal, stop_loss = self.check_for_sell_signal(h, open_position_info)
+                    if  sell_signal:
                         current_time  = raw_trading_data[-1]['date']
-                        self.sell_line(stop_loss, pl, current_time)
-                        previous_strategy_execution_info['history'].append(
-                            {"buy": buy_ps,
-                             "sell": stop_loss, # raw_trading_data[len(h) - 1]['close'],
-                             "trend_info": previous_strategy_execution_info["trend_info"]})
-                        previous_strategy_execution_info["buy_ps"] = None
-                        previous_strategy_execution_info["trend_info"] = None
-                        self.update_pl_summery(buy_ps, instrument_token, pl)
-                        self.buy_sell_lock.release()
+                        tb.exit("buy", instrument_token, current_time, stop_loss, "Trendline", None)
 
-
+    """
+    Looks mostly a hack, need to find if we it can be stored in simple format and pandas can be used to filter it out 
+    """
     def get_simplified_trading_history(self, date, instrument_token):
         raw0 = self.get_trading_history_for_day(instrument_token, date, False, agg_type=self.agg_time)
         raw1 = self.get_trading_history_for_day(instrument_token, date, True, agg_type=self.agg_time)
         raw_trading_data = raw1['trading_data'] if raw1 != None else []
         if raw0 != None:
             raw_trading_data = raw_trading_data + raw0['trading_data']
-        trading_history0 = self.to_close(raw0)
-        trading_history1 = self.to_close(raw1)
+        trading_history0 = self.holc_to(raw0, 'close')
+        trading_history1 = self.holc_to(raw1, 'close')
         current_aggregate = []
         if trading_history1 != None:
             current_aggregate = current_aggregate + trading_history1
@@ -155,11 +105,14 @@ class TrendlineStrategy(Strategy):
         h = current_aggregate
         return h, raw_trading_data
 
-    def check_for_sell_signal(self, h, previous_strategy_execution_info):
-        trend_info = previous_strategy_execution_info['trend_info']
+    def check_for_sell_signal(self, h, open_position_info):
+        trend_info = open_position_info['execution_info']['trend_info']
         stop_loss = (len(h) - 1) * (trend_info['slope']) + trend_info['coefficient']
         stop_loss = 0.995 * stop_loss
         sell_signal = stop_loss > h[-1]
+        # if not sell_signal:
+        #     if (((h[-1] - open_position_info['buy_price'] )/open_position_info['buy_price'])  * 100) > 2:
+        #         return True, h[-1]
         return sell_signal, stop_loss
 
     def execute_strategy_to_check_buy_signal(self, h, raw_trading_data):
@@ -182,26 +135,10 @@ class TrendlineStrategy(Strategy):
             'coefficient']
         return bug_signal, trend_info
 
-    def get_previous_execution_info(self, instrument_token):
-        previous_strategy_execution_info = db.storage.get_st_context().setdefault(instrument_token, {
-            "buy_ps": None,
-            "history": []
-        })
-        return previous_strategy_execution_info
-
-    def update_pl_summery(self, buy_ps, instrument_token, pl):
-        pl_record = self.pl.get(instrument_token)
-        if pl_record == None:
-            pl_record = {"pl": 0, "change": 0}
-        pl_record['pl'] = pl_record['pl'] + pl
-        change = (pl / buy_ps ) * 100
-        pl_record['change'] = pl_record['change'] + change
-        self.pl[instrument_token] = pl_record
-        self.summery_pl.append({"instrument_token": instrument_token, "pl-percentage": change})
-
-    def sell_line(self, price, pl, transaction_date):
-        print(("SEL Time={0}, Price={1:5.2f}, PL={2:5.2f}").format(str(transaction_date), price, pl))
-
+    """
+        Actual trend line detection code
+        Extracted the code from: https://github.com/GregoryMorse/trendln 
+    """
     def detect_trend(self, h, window=40, errpct=10):
         len_h = len(h)
         min_h, max_h = min(h), max(h)

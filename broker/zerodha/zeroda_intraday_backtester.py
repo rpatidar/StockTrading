@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 class ZerodhaServiceIntraDay(ZerodhaServiceBase):
     def __init__(self, credential, configuration):
         super(ZerodhaServiceIntraDay, self).__init__(credential, configuration)
-        self.thread_pool_strategy = ThreadPoolExecutor(2)
+        self.thread_pool_strategy = ThreadPoolExecutor(1)
 
     def init_listening(self):
 
@@ -21,8 +21,8 @@ class ZerodhaServiceIntraDay(ZerodhaServiceBase):
             if instrument_data == None:
                 continue
             instrument_token = instrument_data['instrument_token']
-            trades.append(self.thread_pool_strategy.submit(self.execute_strategy_single_datapoint, instrument_token, stock, stock_config));
-            # self.execute_strategy_single_datapoint(instrument_token, stock, stock_config)
+            #trades.append(self.thread_pool_strategy.submit(self.execute_strategy_single_datapoint, instrument_token, stock, stock_config));
+            self.execute_strategy_single_datapoint(instrument_token, stock, stock_config)
         for t in trades:
             t.result()
         pass
@@ -41,6 +41,8 @@ class ZerodhaServiceIntraDay(ZerodhaServiceBase):
             previous_date = trade_data['date']
             decorated_trading_data = {'instrument_token': instrument_token, 'ohlc': trade_data}
             timestamp = trade_data['date']
+            """5 minute aggregate publish"""
+            """1 minute - irelevent"""
             self._update_tick_data([decorated_trading_data], timestamp)
         if previous_date != None:
             self.close_day(previous_date, instrument_token)

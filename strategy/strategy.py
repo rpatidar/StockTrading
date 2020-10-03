@@ -1,6 +1,6 @@
 from collections import OrderedDict
 import datetime
-from db import storage
+from db.storage import StorageHandler
 
 import threading
 
@@ -96,16 +96,17 @@ class Strategy:
             data.append(ohlc['date'])
         return data
 
-    def to_close(self, trading_data_day):
+    def holc_to(self, trading_data_day, type):
         data = []
         if trading_data_day == None:
             return data
         for ohlc in trading_data_day['trading_data']:
-            data.append(ohlc['low'])
+            data.append(ohlc[type])
         return data
 
     def get_simple_day_history(self, date, instrument_token, last_aggregate_time=None, agg_type=1):
-        full_stock_history = storage.get_db().get(instrument_token, None)
+        sh = StorageHandler()
+        full_stock_history = sh.get_db().get(instrument_token, None)
         required_data = []
 
         if full_stock_history == None:
