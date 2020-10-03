@@ -110,9 +110,9 @@ class TrendlineStrategy(Strategy):
         stop_loss = (len(h) - 1) * (trend_info['slope']) + trend_info['coefficient']
         stop_loss = 0.995 * stop_loss
         sell_signal = stop_loss > h[-1]
-        # if not sell_signal:
-        #     if (((h[-1] - open_position_info['buy_price'] )/open_position_info['buy_price'])  * 100) > 2:
-        #         return True, h[-1]
+        if not sell_signal:
+            if (((h[-1] - open_position_info['buy_price'] )/open_position_info['buy_price'])  * 100) > 3:
+                return True, h[-1]
         return sell_signal, stop_loss
 
     def execute_strategy_to_check_buy_signal(self, h, raw_trading_data):
