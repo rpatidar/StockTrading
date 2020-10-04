@@ -24,7 +24,7 @@ class TrendlineStrategy(Strategy):
         self.d_dx = FinDiff(0, dx, 1, acc=self.accuracy)  # acc=3 #for 5-point stencil, currenly uses +/-1 day only
         self.d2_dx2 = FinDiff(0, dx, 2, acc=self.accuracy)  # acc=3 #for 5-point stencil, currenly uses +/-1 day only
         self.numbest = -1
-        self.pctbound = 1
+        self.pctbound = 0.20
         self.last_run = {}
         """
             Store the data in following format 
@@ -95,8 +95,8 @@ class TrendlineStrategy(Strategy):
         raw_trading_data = raw1['trading_data'] if raw1 != None else []
         if raw0 != None:
             raw_trading_data = raw_trading_data + raw0['trading_data']
-        trading_history0 = self.holc_to(raw0, 'close')
-        trading_history1 = self.holc_to(raw1, 'close')
+        trading_history0 = self.holc_to(raw0, 'low')
+        trading_history1 = self.holc_to(raw1, 'low')
         current_aggregate = []
         if trading_history1 != None:
             current_aggregate = current_aggregate + trading_history1
@@ -107,39 +107,82 @@ class TrendlineStrategy(Strategy):
 
     def check_for_sell_signal(self, h, open_position_info):
         trend_info = open_position_info['execution_info']['trend_info']
+        """
+        Detect the stop loss based on the trend line and also keep a margin of .5 percent below trendline. 
+        """
         stop_loss = (len(h) - 1) * (trend_info['slope']) + trend_info['coefficient']
         stop_loss = 0.995 * stop_loss
         sell_signal = stop_loss > h[-1]
+
+        """
+        Not enfough evidence of this helping but sounds better
+        """
         if not sell_signal:
             if (((h[-1] - open_position_info['buy_price'] )/open_position_info['buy_price'])  * 100) > 3:
                 return True, h[-1]
+        """
+        Lets not sell if the loss is not high..
+        """
+        if sell_signal and (((h[-1] - open_position_info['buy_price'] )/open_position_info['buy_price'])  * 100)  < 0.5:
+            return False, stop_loss
         return sell_signal, stop_loss
 
     def execute_strategy_to_check_buy_signal(self, h, raw_trading_data):
         mintrend, minwindows = self.detect_trend(h)
+
+        """
+        minwindows values return following format : [],(X,X,X,X,X,X)        
+        (1) Array of Trend points - 
+        (2) Touple of following values 
+            (1) -- Slope, 
+            (2) -- Cofficient/Regression Intercept, 
+            (3) -- ys=Sum of squre residual for the expected Y
+            (4) -- ser = Standard Error of Slope
+            (5) -- SigmaM=Standard Error of Intercept  
+            (6) -- Sum of Area because of error gaps           
+        """
+
         trend_info = {}
+        bug_signal = False
         for trends in minwindows:
+            best_trend = None
             for trend in trends:
-                percentage_change = (trend[1][0] / h[-1]) * 100
-                if (percentage_change > 0.10 and trend_info.get("slope") == None) or (
-                        trend_info.get("slope") != None and trend_info.get("slope") < trend[1][0]):
-                    temp_closing_index = trend[0][-1]
-                    if temp_closing_index == len(h) - 3:
-                        # Record the current trend line info
-                        trend_info["trendpoints"] = [
-                            {"price": raw_trading_data[i]['low'], "date": raw_trading_data[i]['date']} for
-                            i in trend[0]]
-                        trend_info["slope"] = trend[1][0]
-                        trend_info['coefficient'] = trend[1][1]
-        bug_signal = trend_info.get('slope') != None and h[-2] > (len(h) - 2) * (trend_info['slope']) + trend_info[
-            'coefficient']
+                percentage_change = ((h[-1]-h[trend[0][0]]) / h[trend[0][0]]) * 100
+                percentage_change_per_data_points = percentage_change / (trend[0][-1] - trend[0][0])
+                error_slope_pct = (trend[1][3] / h[trend[0][0]]) * 100
+                slope_percentage = (trend[1][0] / h[trend[0][0]]) * 100
+
+                #print("Slope-percentage:" + str(trend[1][0]/ h[trend[0][0]]))
+                if (percentage_change_per_data_points > 0.080 and slope_percentage > 0.080):
+                    if trend_info.get("slope") == None  or (trend_info.get("slope") != None and trend_info.get("slope") < trend[1][0]):
+                        temp_closing_index = trend[0][-1]
+                        if  (len(h) -1  - temp_closing_index) == 0 :
+                            # Record the current trend line info
+                            # best_trend = trend
+                            trend_info["trendpoints"] = [ {"price": raw_trading_data[i]['low'], "date": raw_trading_data[i]['date']} for i in trend[0]]
+                            trend_info["slope"] = trend[1][0]
+                            trend_info['coefficient'] = trend[1][1]
+                            print("trend-info" +  str(trend_info))
+                            print("Trend-Points:" + str(trend[1]))
+                            print("Slope-Percentage" + str(slope_percentage) +" ErrorPercentage="+ str(error_slope_pct))
+                            import math
+                            gap_percentage = (100 * ((h[-1] - ((len(h) - 1) * (trend_info['slope']) + trend_info['coefficient'])) / h[-1]))
+                            print("Gap=" + str(gap_percentage))
+                            print("Current:"  + str(h[-1]))
+                            print("Projected:" +  str((len(h) - 1) * (trend_info['slope']) + trend_info['coefficient']))
+                            bug_signal = gap_percentage < 0.8
+        # if best_trend != None:e4
+        #     percentage_change1 = ((h[-1]-h[best_trend[0][0]]) / h[best_trend[0][0]]) * 100
+        #     percentage_change_per_data_points = percentage_change1 / (best_trend[0][-1] - best_trend[0][0])
+        #     #print("percentage-change" + str(percentage_change_per_data_points))
+
         return bug_signal, trend_info
 
     """
         Actual trend line detection code
         Extracted the code from: https://github.com/GregoryMorse/trendln 
     """
-    def detect_trend(self, h, window=40, errpct=10):
+    def detect_trend(self, h, window=30, errpct=1):
         len_h = len(h)
         min_h, max_h = min(h), max(h)
 

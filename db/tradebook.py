@@ -79,17 +79,19 @@ class TradeBook(metaclass=Singleton):
         if not os.path.exists("./tmp/summery"):
             os.mkdir("./tmp/summery")
 
-        file = open("./tmp/summery/trendline0.json", "w")
-
-        file.write(json.dumps(sh.get_st_context(), indent=1, default=str))
-        file.close()
+        # file = open("./tmp/summery/trendline0.json", "w")
+        #
+        # file.write(json.dumps(sh.get_st_context(), indent=1, default=str))
+        # file.close()
         file = open("./tmp/summery/trendline1.json", "w")
         file.write(json.dumps(self.summery_pl, indent=1, default=str))
         file.close()
         file = open("./tmp/summery/trendline2.json", "w")
         file.write(json.dumps(self.pl, indent=1, default=str))
         file.close()
-
+        file = open("./tmp/summery/history.json", "w")
+        file.write(json.dumps(self.history, indent=1, default=str))
+        file.close()
         # TODO: for debugging the graphs
         # intresting_instrument_token = 738561
         # instresing_dates = []

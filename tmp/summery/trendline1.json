@@ -1,110 +1,130 @@
 [
  {
-  "instrument_token": 1723649,
-  "pl-percentage": -0.38887732034952804
+  "instrument_token": 341249,
+  "pl-percentage": -0.5973715651135006
  },
  {
-  "instrument_token": 3412993,
-  "pl-percentage": -0.46667553217687
+  "instrument_token": 492033,
+  "pl-percentage": 1.6013325864661345
  },
  {
-  "instrument_token": 4445185,
-  "pl-percentage": -0.8762202301311233
+  "instrument_token": 779521,
+  "pl-percentage": -1.1970074812967608
  },
  {
-  "instrument_token": 2873089,
-  "pl-percentage": -0.43079428307065115
+  "instrument_token": 779521,
+  "pl-percentage": 3.4959775915022298
  },
  {
-  "instrument_token": 2873089,
-  "pl-percentage": 1.7946178736782028
+  "instrument_token": 81153,
+  "pl-percentage": -0.966045734317035
  },
  {
-  "instrument_token": 5197313,
-  "pl-percentage": -0.06431319203473305
+  "instrument_token": 2815745,
+  "pl-percentage": -0.22469849131014089
  },
  {
-  "instrument_token": 5197313,
-  "pl-percentage": 5.256833884049264
+  "instrument_token": 2939649,
+  "pl-percentage": -0.899224806201555
  },
  {
-  "instrument_token": 5197313,
-  "pl-percentage": -1.1166710642913824
+  "instrument_token": 2939649,
+  "pl-percentage": -2.4764735017335315
  },
  {
-  "instrument_token": 5197313,
-  "pl-percentage": 0.06274491904340368
+  "instrument_token": 1510401,
+  "pl-percentage": -1.7720090293453776
  },
  {
-  "instrument_token": 952577,
-  "pl-percentage": -1.4831595331813046
+  "instrument_token": 633601,
+  "pl-percentage": -0.8883248730964504
  },
  {
-  "instrument_token": 3623425,
-  "pl-percentage": 0.676171305244497
+  "instrument_token": 633601,
+  "pl-percentage": -2.1556886227544876
  },
  {
-  "instrument_token": 962817,
-  "pl-percentage": 0.2650309245051664
+  "instrument_token": 857857,
+  "pl-percentage": -0.018767007600642347
  },
  {
-  "instrument_token": 3365633,
-  "pl-percentage": -0.25501430583185536
+  "instrument_token": 2977281,
+  "pl-percentage": 1.7899856351643664
  },
  {
-  "instrument_token": 958465,
-  "pl-percentage": 0.12727554175841338
+  "instrument_token": 2977281,
+  "pl-percentage": -0.7318348144276036
  },
  {
-  "instrument_token": 1149697,
-  "pl-percentage": -1.1029554407692876
+  "instrument_token": 2977281,
+  "pl-percentage": 1.3131998098037925
  },
  {
-  "instrument_token": 1149697,
-  "pl-percentage": -0.09117289291530994
+  "instrument_token": 2977281,
+  "pl-percentage": -0.46904315196998125
  },
  {
-  "instrument_token": 3634689,
-  "pl-percentage": -0.40957204286488946
+  "instrument_token": 3834113,
+  "pl-percentage": -2.07212055974167
  },
  {
-  "instrument_token": 3634689,
-  "pl-percentage": 1.9540406075645889
+  "instrument_token": 3834113,
+  "pl-percentage": 0.9697822656154832
  },
  {
-  "instrument_token": 3938305,
-  "pl-percentage": 1.2870741780616388
+  "instrument_token": 897537,
+  "pl-percentage": 2.797221022899241
  },
  {
-  "instrument_token": 3938305,
-  "pl-percentage": -0.5225343649960208
+  "instrument_token": 897537,
+  "pl-percentage": 0.6401234848141084
  },
  {
-  "instrument_token": 3938305,
-  "pl-percentage": 0.09787003705836886
+  "instrument_token": 364545,
+  "pl-percentage": 1.1711567293702079
  },
  {
-  "instrument_token": 3938305,
-  "pl-percentage": -2.2325977878375154
+  "instrument_token": 364545,
+  "pl-percentage": 1.165822414653281
  },
  {
-  "instrument_token": 3938305,
-  "pl-percentage": 0.37469089454206844
+  "instrument_token": 364545,
+  "pl-percentage": -2.5507129945772222
  },
  {
-  "instrument_token": 428801,
-  "pl-percentage": -0.2831481162675274
+  "instrument_token": 364545,
+  "pl-percentage": 0.9736844251824365
  },
  {
-  "instrument_token": 2745857,
-  "pl-percentage": -0.20298727373255082
+  "instrument_token": 5582849,
+  "pl-percentage": -1.7875441193214086
  },
  {
-  "instrument_token": 3491073,
-  "pl-percentage": 0.7951676753809179
+  "instrument_token": 4600577,
+  "pl-percentage": 1.047453706874455
  },
  {
-  "instrument_token": 3491073,
-  "pl-percentage": -0.34665048298666884
+  "instrument_token": 4600577,
+  "pl-percentage": 2.757371042455057
+ },
+ {
+  "instrument_token": 2585345,
+  "pl-percentage": -0.51849775784754
+ },
+ {
+  "instrument_token": 2800641,
+  "pl-percentage": -1.7898219631321943
+ },
+ {
+  "instrument_token": 3861249,
+  "pl-percentage": 3.9171913507832508
+ },
+ {
+  "instrument_token": 3861249,
+  "pl-percentage": -1.7426460337376275
+ },
+ {
+  "instrument_token": 2865921,
+  "pl-percentage": 4.912322602524533
  }
 ]
