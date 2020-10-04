@@ -54,8 +54,6 @@ class TrendlineStrategy(Strategy):
             pl = close_price - open_position['buy_price']
             tb.exit("buy", instrument_token, date, close_price, "Trendline", None)
 
-
-
     def run(self, tick_datas, riskmanagement, timestamp):
         for tick_data in tick_datas:
             instrument_token = tick_data['instrument_token']
@@ -95,6 +93,10 @@ class TrendlineStrategy(Strategy):
         raw_trading_data = raw1['trading_data'] if raw1 != None else []
         if raw0 != None:
             raw_trading_data = raw_trading_data + raw0['trading_data']
+        """
+        As of now we are checking for 2 days only for trend detection, it can be increased to more data points
+        as we find more learnings. 
+        """
         trading_history0 = self.holc_to(raw0, 'low')
         trading_history1 = self.holc_to(raw1, 'low')
         current_aggregate = []
@@ -162,15 +164,15 @@ class TrendlineStrategy(Strategy):
                             trend_info["trendpoints"] = [ {"price": raw_trading_data[i]['low'], "date": raw_trading_data[i]['date']} for i in trend[0]]
                             trend_info["slope"] = trend[1][0]
                             trend_info['coefficient'] = trend[1][1]
-                            print("trend-info" +  str(trend_info))
-                            print("Trend-Points:" + str(trend[1]))
-                            print("Slope-Percentage" + str(slope_percentage) +" ErrorPercentage="+ str(error_slope_pct))
-                            import math
                             gap_percentage = (100 * ((h[-1] - ((len(h) - 1) * (trend_info['slope']) + trend_info['coefficient'])) / h[-1]))
-                            print("Gap=" + str(gap_percentage))
-                            print("Current:"  + str(h[-1]))
-                            print("Projected:" +  str((len(h) - 1) * (trend_info['slope']) + trend_info['coefficient']))
-                            bug_signal = gap_percentage < 0.8
+                            # print("trend-info" +  str(trend_info))
+                            # print("Trend-Points:" + str(trend[1]))
+                            # print("Slope-Percentage" + str(slope_percentage) +" ErrorPercentage="+ str(error_slope_pct))
+                            import math
+                            # print("Gap=" + str(gap_percentage))
+                            # print("Current:"  + str(h[-1]))
+                            # print("Projected:" +  str((len(h) - 1) * (trend_info['slope']) + trend_info['coefficient']))
+                            bug_signal = gap_percentage < 0.4 and gap_percentage > -0.4
         # if best_trend != None:e4
         #     percentage_change1 = ((h[-1]-h[best_trend[0][0]]) / h[best_trend[0][0]]) * 100
         #     percentage_change_per_data_points = percentage_change1 / (best_trend[0][-1] - best_trend[0][0])
