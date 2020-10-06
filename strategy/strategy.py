@@ -4,6 +4,7 @@ from db.storage import StorageHandler
 
 import threading
 
+
 class Strategy:
     def __init__(self):
 
@@ -15,7 +16,6 @@ class Strategy:
     #     pass
     def close_day(self, date):
         print("Will Run the day closure..")
-
 
     def _get_create_or_get_day_history(self, script, timestamp, readonly=True, last_aggregate_date=None, aggregate=None,
                                        agg_type=1, last_aggregate_time=None):
@@ -47,6 +47,7 @@ class Strategy:
         I personally don't like the way this method is written, just thought to build some aggregate by date for easy processing. 
         The task of this function is to update the aggregate of previous timestamp in the local cache if not already done.
     """
+
     def _update_local_cache(self, tick_data, timestamp, agg_type=1):
         self.lock.acquire()
         current_minute, current_date, last_aggregate_time = self.get_previous_aggregate_timestamp(timestamp, agg_type)
@@ -102,7 +103,7 @@ class Strategy:
         if trading_data_day == None:
             return data
         for ohlc in trading_data_day['trading_data']:
-            data.append(ohlc['low'  ])
+            data.append(ohlc['low'])
         return data
 
     def get_simple_day_history(self, date, instrument_token, last_aggregate_time=None, agg_type=1):

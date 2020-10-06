@@ -1,6 +1,7 @@
 import os
 import json
-history = json.load(open("./tmp/summery/history.json","r"))
+
+history = json.load(open("./tmp/summery/history.json", "r"))
 import plotly.graph_objects as go
 import plotly as py
 import pandas as pd
@@ -10,6 +11,8 @@ import dateutil.parser
 
 import pandas as pd
 import pickle
+
+
 def get_instrument():
     filehandler = open("./tmp/instruments", 'rb')
     instrument = pickle.load(filehandler)
@@ -42,44 +45,41 @@ historical = get_historical('JINDALSTEL', instrument_id, "2019-12-01", "2019-12-
 df = pd.DataFrame(historical)
 df.set_index('date')
 
-
 layout = go.Layout(
     xaxis=dict(rangebreaks=[
-        dict(bounds=["sat", "mon"]), # hide weekends
-        dict(values=["2019-12-25", "2020-01-01"]), # hide Christmas and New Year's,
-        { 'pattern': 'hour', 'bounds': [16, 9] }
-        ],
+        dict(bounds=["sat", "mon"]),  # hide weekends
+        dict(values=["2019-12-25", "2020-01-01"]),  # hide Christmas and New Year's,
+        {'pattern': 'hour', 'bounds': [16, 9]}
+    ],
     )
 )
 
 points = []
-for x in stock_trading_history :
-    points.append([{'price' : z['price'], 'date': dateutil.parser.parse(z['date']) } for z in x['execution_info']['trend_info']['trendpoints']])
+for x in stock_trading_history:
+    points.append([{'price': z['price'], 'date': dateutil.parser.parse(z['date'])} for z in
+                   x['execution_info']['trend_info']['trendpoints']])
 
-
-#"%Y-%m-%d %H:%M:%S%z"
+# "%Y-%m-%d %H:%M:%S%z"
 # points = [{'price' : x['price'], 'date': dateutil.parser.parse(x['date']) } for x in points]
-#ppd = pd.DataFrame(points)
+# ppd = pd.DataFrame(points)
 
 # ppd.set_index('date')
 # price_points = ppd['price']
 # x_points = ppd['date']
-data=[go.Candlestick(x=df['date'],
-                                     open=df['open'],
-                                     high=df['high'],
-                                     low=df['low'],
-                                     close=df['close'])]
+data = [go.Candlestick(x=df['date'],
+                       open=df['open'],
+                       high=df['high'],
+                       low=df['low'],
+                       close=df['close'])]
 for p in points:
     ppd = pd.DataFrame(p)
     print(ppd)
     price_points = ppd['price']
     x_points = ppd['date']
-    data.append(dict( x=x_points, y=price_points, type='scatter',
-                         marker = dict( color = 'blue' ),
-                          name='Trendline', mode='lines'))
+    data.append(dict(x=x_points, y=price_points, type='scatter',
+                     marker=dict(color='blue'),
+                     name='Trendline', mode='lines'))
 
-fig = go.Figure(data=data,layout=layout)
-
+fig = go.Figure(data=data, layout=layout)
 
 py.offline.plot(fig)
-

@@ -24,10 +24,10 @@ class TradingService:
     def init_listening(self):
         pass
 
-    def _update_tick_data(self, tick_data, timestamp):
+    def _update_tick_data(self, tick_data, timestamp, backfill=False):
         for callback in self.callbacks:
-            callback(tick_data, timestamp)
+            callback(tick_data, timestamp, backfill=backfill)
 
-    def close_day(self, date, instrument_token):
+    def close_day(self, date, instrument_token, backfill=False):
         for callback in self.day_closure_callbacks:
-            callback(date, instrument_token)
+            callback(date, instrument_token, backfill=backfill)

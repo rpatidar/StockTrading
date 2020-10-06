@@ -1,9 +1,9 @@
-
 from utils.objecthelpers import Singleton
 from db.storage import StorageHandler
 
 import os
 import threading
+
 
 class TradeBook(metaclass=Singleton):
 
@@ -16,17 +16,25 @@ class TradeBook(metaclass=Singleton):
             Single object map manupulation said to be not requiring locking in python            
         """
         self.buy_sell_lock = threading.Lock()
+        self.trading_service = None
 
-    def enter(self, type, instrument_token,date,  price, strategy, stragegy_context):
+    def register_trading_service(self, trading_service):
+        self.trading_service = trading_service
+
+    def enter(self, type, instrument_token, date, price, strategy, stragegy_context):
         self.buy_sell_lock.acquire()
 
         print(("BUY Time={0}, Price={1:5.2f}").format(str(date), price))
         self.open_positions[instrument_token] = {
-            "buy_price" : price,
-            "date" : date,
-            "execution_info" : stragegy_context,
-            "strategy" : strategy
+            "buy_price": price,
+            "date": date,
+            "execution_info": stragegy_context,
+            "strategy": strategy
         }
+
+        if self.trading_service:
+            self.trading_service.enter(type, instrument_token, date, price, strategy)
+
         self.buy_sell_lock.release()
 
     def exit(self, type, instrument_token, date, price, strategy, stragegy_context):
@@ -39,11 +47,15 @@ class TradeBook(metaclass=Singleton):
              "execution_info": open_position["execution_info"]})
 
         """TODO: Find better way to combine this into one place"""
-        self.update_pl_summery(open_position['buy_price'], instrument_token, price-open_position['buy_price'])
-        self.sell_line(price, price-open_position['buy_price'], date)
+        self.update_pl_summery(open_position['buy_price'], instrument_token, price - open_position['buy_price'])
+        self.sell_line(price, price - open_position['buy_price'], date)
 
         """Close the open position"""
         self.open_positions[instrument_token] = None
+
+        if self.trading_service:
+            self.trading_service.exit(type, instrument_token, date, price, strategy)
+
         self.buy_sell_lock.release()
 
     def update_pl_summery(self, buy_ps, instrument_token, pl):
@@ -51,7 +63,7 @@ class TradeBook(metaclass=Singleton):
         if pl_record == None:
             pl_record = {"pl": 0, "change": 0}
         pl_record['pl'] = pl_record['pl'] + pl
-        change = (pl / buy_ps ) * 100
+        change = (pl / buy_ps) * 100
         pl_record['change'] = pl_record['change'] + change
         self.pl[instrument_token] = pl_record
         self.summery_pl.append({"instrument_token": instrument_token, "pl-percentage": change})
@@ -69,7 +81,7 @@ class TradeBook(metaclass=Singleton):
             1) print stats such as Max Loss, Max Gain
             2) Continous loosing days
             3) Continous winning days
-            4) DD - 100, -> 50, 150, 140  ~(150-140)/150
+            4) DD - 100, -> 50, 150, 140  ~(150-140)/150            
         """
 
         print("-----------------Trendline Strategy Summary --------------")
@@ -114,4 +126,6 @@ class TradeBook(metaclass=Singleton):
         # plt.subplot(1,1,1)
         # plt.scatter([f'{x:%Y-%m-%d %H:%M}' for x in final_dates], final_data)
         # plt.show()
+
+
 pass

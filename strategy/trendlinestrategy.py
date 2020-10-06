@@ -11,6 +11,7 @@ import os
 import matplotlib
 import matplotlib.pyplot as plt
 
+
 class TrendlineStrategy(Strategy):
 
     def __init__(self):
@@ -38,55 +39,65 @@ class TrendlineStrategy(Strategy):
         self.market_history = {}
         self.agg_time = 5
 
-        #self.last_closure = {}
+        # self.last_closure = {}
 
+    def close_day(self, date, instrument_token, backfill=False):
 
-    def close_day(self, date, instrument_token):
+        if backfill:
+            return
+
         self.last_run[instrument_token] = -1
-        #TODO: Fix the aggregate for the last minute, as of now the data is loaded for the previous candle, 5 minute aggregate before as
-        #Current aggregate might be incomplete.
+        # TODO: Fix the aggregate for the last minute, as of now the data is loaded for the previous candle, 5 minute aggregate before as
+        # Current aggregate might be incomplete.
         sh = StorageHandler()
-        close_price = self.get_trading_history_for_day(instrument_token, date.date(), False, agg_type=self.agg_time)["trading_data"][-1]['close']
+        close_price = \
+        self.get_trading_history_for_day(instrument_token, date.date(), False, agg_type=self.agg_time)["trading_data"][
+            -1]['close']
         from db.tradebook import TradeBook
         tb = TradeBook()
-        open_position  = tb.get_previous_execution_info(instrument_token)
+        open_position = tb.get_previous_execution_info(instrument_token)
         if open_position != None and open_position['execution_info']['buy_ps'] != None:
             pl = close_price - open_position['buy_price']
             tb.exit("buy", instrument_token, date, close_price, "Trendline", None)
 
-    def run(self, tick_datas, riskmanagement, timestamp):
+    def run(self, tick_datas, riskmanagement, timestamp, backfill=False):
         for tick_data in tick_datas:
             instrument_token = tick_data['instrument_token']
             trading_data = tick_data['ohlc']
             date = timestamp.date();
             self._update_local_cache(tick_data, timestamp, agg_type=self.agg_time)
-            h, raw_trading_data = self.get_simplified_trading_history(date, instrument_token)
 
-            #If the aggregates are not updated should we run
+            if backfill:
+                continue
+
+            h, raw_trading_data = self.get_simplified_trading_history(date, instrument_token)
+            # If the aggregates are not updated should we run
             if len(h) <= self.last_run.get(instrument_token, 0):
                 return
 
-            from db.tradebook import  TradeBook
+            from db.tradebook import TradeBook
             tb = TradeBook()
 
             self.last_run[instrument_token] = len(h)
             if (len(h) > 5):
                 open_position_info = tb.get_previous_execution_info(instrument_token)
-                if open_position_info == None: # or previous_strategy_execution_info['buy_ps'] == None:
+                if open_position_info == None:  # or previous_strategy_execution_info['buy_ps'] == None:
                     bug_signal, trend_info = self.execute_strategy_to_check_buy_signal(h, raw_trading_data)
-                    if bug_signal :  # and two_pm_for_day > trade_time:
+                    if bug_signal:  # and two_pm_for_day > trade_time:
                         trade_data = raw_trading_data[-1]
-                        tb.enter("buy", instrument_token, trade_data['date'], trade_data['close'],"Trendline",  {"trend_info": trend_info, "buy_ps": len(h) - 1})
+                        tb.enter("buy", instrument_token, trade_data['date'], trade_data['close'], "Trendline",
+                                 {"trend_info": trend_info, "buy_ps": len(h) - 1})
 
                 if open_position_info != None:
                     sell_signal, stop_loss = self.check_for_sell_signal(h, open_position_info)
-                    if  sell_signal:
-                        current_time  = raw_trading_data[-1]['date']
+                    if sell_signal:
+                        current_time = raw_trading_data[-1]['date']
                         tb.exit("buy", instrument_token, current_time, stop_loss, "Trendline", None)
 
     """
     Looks mostly a hack, need to find if we it can be stored in simple format and pandas can be used to filter it out 
     """
+
     def get_simplified_trading_history(self, date, instrument_token):
         raw0 = self.get_trading_history_for_day(instrument_token, date, False, agg_type=self.agg_time)
         raw1 = self.get_trading_history_for_day(instrument_token, date, True, agg_type=self.agg_time)
@@ -120,12 +131,13 @@ class TrendlineStrategy(Strategy):
         Not enfough evidence of this helping but sounds better
         """
         if not sell_signal:
-            if (((h[-1] - open_position_info['buy_price'] )/open_position_info['buy_price'])  * 100) > 3:
+            if (((h[-1] - open_position_info['buy_price']) / open_position_info['buy_price']) * 100) > 3:
                 return True, h[-1]
+
         """
         Lets not sell if the loss is not high..
         """
-        if sell_signal and (((h[-1] - open_position_info['buy_price'] )/open_position_info['buy_price'])  * 100)  < 0.5:
+        if sell_signal and (((h[-1] - open_position_info['buy_price']) / open_position_info['buy_price']) * 100) < 0.5:
             return False, stop_loss
         return sell_signal, stop_loss
 
@@ -149,22 +161,27 @@ class TrendlineStrategy(Strategy):
         for trends in minwindows:
             best_trend = None
             for trend in trends:
-                percentage_change = ((h[-1]-h[trend[0][0]]) / h[trend[0][0]]) * 100
+                percentage_change = ((h[-1] - h[trend[0][0]]) / h[trend[0][0]]) * 100
                 percentage_change_per_data_points = percentage_change / (trend[0][-1] - trend[0][0])
                 error_slope_pct = (trend[1][3] / h[trend[0][0]]) * 100
                 slope_percentage = (trend[1][0] / h[trend[0][0]]) * 100
 
-                #print("Slope-percentage:" + str(trend[1][0]/ h[trend[0][0]]))
+                # print("Slope-percentage:" + str(trend[1][0]/ h[trend[0][0]]))
                 if (percentage_change_per_data_points > 0.080 and slope_percentage > 0.080):
-                    if trend_info.get("slope") == None  or (trend_info.get("slope") != None and trend_info.get("slope") < trend[1][0]):
+                    if trend_info.get("slope") == None or (
+                            trend_info.get("slope") != None and trend_info.get("slope") < trend[1][0]):
                         temp_closing_index = trend[0][-1]
-                        if  (len(h) -1  - temp_closing_index) == 0 :
+                        if (len(h) - 1 - temp_closing_index) == 0:
                             # Record the current trend line info
                             # best_trend = trend
-                            trend_info["trendpoints"] = [ {"price": raw_trading_data[i]['low'], "date": raw_trading_data[i]['date']} for i in trend[0]]
+                            trend_info["trendpoints"] = [
+                                {"price": raw_trading_data[i]['low'], "date": raw_trading_data[i]['date']} for i in
+                                trend[0]]
                             trend_info["slope"] = trend[1][0]
                             trend_info['coefficient'] = trend[1][1]
-                            gap_percentage = (100 * ((h[-1] - ((len(h) - 1) * (trend_info['slope']) + trend_info['coefficient'])) / h[-1]))
+                            gap_percentage = (100 * (
+                                        (h[-1] - ((len(h) - 1) * (trend_info['slope']) + trend_info['coefficient'])) /
+                                        h[-1]))
                             # print("trend-info" +  str(trend_info))
                             # print("Trend-Points:" + str(trend[1]))
                             # print("Slope-Percentage" + str(slope_percentage) +" ErrorPercentage="+ str(error_slope_pct))
@@ -184,6 +201,7 @@ class TrendlineStrategy(Strategy):
         Actual trend line detection code
         Extracted the code from: https://github.com/GregoryMorse/trendln 
     """
+
     def detect_trend(self, h, window=30, errpct=1):
         len_h = len(h)
         min_h, max_h = min(h), max(h)

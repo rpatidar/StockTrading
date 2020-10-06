@@ -10,7 +10,7 @@ class TradingSystem(object):
         self.tradingAPI.on_tick_update(self.record_in_db)
         self.tradingAPI.on_tick_update(self.strategy_runner)
         self.tradingAPI.on_day_closure(self.day_closure)
-        #self.riskmanagement = RiskManagement()
+        # self.riskmanagement = RiskManagement()
 
     def run(self):
         self.tradingAPI.run()
@@ -38,7 +38,8 @@ class TradingSystem(object):
         1) Store this data in some time series DB
         2) build capability to aggregate based on the #1 minute, #5 minute level
     """
-    def record_in_db(self, td, timestamp):
+
+    def record_in_db(self, td, timestamp, backfill=False):
         # Recording data in DB[{'tradable': True, 'mode': 'quote', 'instrument_token': 5633, 'last_price': 1357.85, 'last_quantity': 25, 'average_price': 1346.6, 'volume': 713412, 'buy_quantity': 226, 'sell_quantity': 0, 'ohlc': {'open': 1333.0, 'high': 1361.8, 'low': 1326.65, 'close': 1338.65}, 'change': 1.4342808052888967}]
 
         tick_data = td[0]
@@ -64,9 +65,9 @@ class TradingSystem(object):
 
         # print("Recording data in DB" + str(tick_data))
 
-    def strategy_runner(self, tick_data, timestamp):
+    def strategy_runner(self, tick_data, timestamp, backfill=False):
         for strategy in self.stratagies:
-            order_details = strategy.run(tick_data, None, timestamp)
+            order_details = strategy.run(tick_data, None, timestamp, backfill=backfill)
             # if order_details != None:
             #     break
         pass

@@ -11,8 +11,8 @@ Strcuture of the data stored in the storage is
 global storage
 global strategy_context
 
+from utils.objecthelpers import Singleton
 
-from utils.objecthelpers import  Singleton
 
 class StorageHandler(metaclass=Singleton):
 
