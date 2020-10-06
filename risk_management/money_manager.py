@@ -44,7 +44,7 @@ class MoneyManager(object):
         if quantity <= position['quantity']:
             position['quantity'] = quantity_changed = position['quantity'] - quantity;
             position['quantity'] = quantity_changed;
-            pl = (position['price'] - price if type == "buy" else price - position['price']) *
+            pl = (position['price'] - price if type == "buy" else price - position['price'])
             self.update_profit_loss(pl)
         else:
             quantity = quantity - position['quantity']

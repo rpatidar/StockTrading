@@ -1,6 +1,7 @@
 from strategy.trendlinestrategy import TrendlineStrategy
 
 from zerodha.zerodha_live_trading import ZerodhaServiceOnline
+from zerodha.zeroda_intraday_backtester import ZerodhaServiceIntraDay
 from db import storage
 from tradingsystem.tradingsystem import TradingSystem
 
