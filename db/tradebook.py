@@ -1,6 +1,6 @@
 from utils.objecthelpers import Singleton
 from db.storage import StorageHandler
-
+import logging
 import os
 import threading
 
@@ -24,7 +24,7 @@ class TradeBook(metaclass=Singleton):
     def enter(self, type, instrument_token, date, price, strategy, stragegy_context):
         self.buy_sell_lock.acquire()
 
-        print(("BUY Time={0}, Price={1:5.2f}").format(str(date), price))
+        logging.info(("BUY Time={0}, Price={1:5.2f}").format(str(date), price))
         self.open_positions[instrument_token] = {
             "buy_price": price,
             "date": date,
@@ -69,7 +69,7 @@ class TradeBook(metaclass=Singleton):
         self.summery_pl.append({"instrument_token": instrument_token, "pl-percentage": change})
 
     def sell_line(self, price, pl, transaction_date):
-        print(("SEL Time={0}, Price={1:5.2f}, PL={2:5.2f}").format(str(transaction_date), price, pl))
+        logging.info(("SEL Time={0}, Price={1:5.2f}, PL={2:5.2f}").format(str(transaction_date), price, pl))
 
     def get_previous_execution_info(self, instrument_token):
         return self.open_positions.get(instrument_token)
@@ -84,10 +84,10 @@ class TradeBook(metaclass=Singleton):
             4) DD - 100, -> 50, 150, 140  ~(150-140)/150            
         """
 
-        print("-----------------Trendline Strategy Summary --------------")
-        print("Summary:" + str(self.pl))
+        logging.info("-----------------Trendline Strategy Summary --------------")
+        logging.info("Summary:" + str(self.pl))
         import json
-        print("Debug Info: ------")
+        logging.info("Debug Info: ------")
         if not os.path.exists("./tmp/summery"):
             os.mkdir("./tmp/summery")
 

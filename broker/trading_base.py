@@ -1,11 +1,12 @@
 from broker.indan_stock import NSETradingSystem
 
+import logging
 
 class TradingService:
     def __init__(self, credential, configuration):
         self.credential = credential
         self.configuration = configuration
-        print("Creating a trading service")
+        logging.info("Creating a trading service")
         # Find some way to keep the data immutable with the parent callback
         self.callbacks = []
         self.day_closure_callbacks = []

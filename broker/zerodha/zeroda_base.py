@@ -41,8 +41,7 @@ class ZerodhaServiceBase(TradingService):
             return None
         session_data = pickle.load(open(self.session_file, "rb"))
 
-        if (session_data['lastSessionDate'] + datetime.timedelta(days=-1) < datetime.datetime.now()
-                and session_data['lastSessionDate'] > (datetime.datetime.now() - datetime.timedelta(days=-2))):
+        if session_data['lastSessionDate'] + datetime.timedelta(days=1) > datetime.datetime.now():
             return session_data['token']
         return None
 
