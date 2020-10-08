@@ -13,7 +13,7 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         self.intresting_stocks = self.configuration['stocks_to_subscribe']
         self.intresting_stocks_full_mode = self.configuration['stocks_in_fullmode']
         self.__setup()
-
+        self._preload_historical_data()
         # initialize the thread
 
     def __setup(self):
@@ -24,6 +24,10 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         self.kws.on_close = self.on_close
 
     def on_ticks(self, ws, ticks):
+        """Outside business range update ticks should be ignored"""
+        if not (NINE_AM < datetime.datetime.now() < FOUR_PM):
+            return
+
         # Callback to receive ticks.
         logging.debug("Ticks: {}".format(ticks))
         # Little approximation on time.
@@ -48,23 +52,27 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         # [738561]
         # ws.set_mode(ws.MODE_FULL, self.intresting_stocks_full_mode)
 
+
     def _preload_historical_data(self):
         """
         This is not the effective implementation, as of now blindly pre loading 1 week of data in memory.
         :return:
         # """
-        # from datetime import datetime, timedelta
-        # todays_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        #
-        # start_date = todays_date - timedelta(days=7)
-        # end_date = todays_date
-        #
-        # for stock in self.intresting_stocks:
-        #     instrument_data = self._instrument_row(self.instruments, stock)
-        #     if instrument_data == None:
-        #         continue
-        #     self.execute_strategy_single_datapoint(instrument_data['instrument_token'], stock,
-        #                                            {"from": start_date, "to": end_date}, backfill=True)
+        logging.info("Preloading the data for old dates")
+        from datetime import datetime, timedelta
+        todays_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+        start_date = todays_date - timedelta(days=7)
+        end_date = todays_date
+
+        for stock in self.intresting_stocks:
+            instrument_data = self._instrument_row(self.instruments, stock)
+            if instrument_data == None:
+                continue
+            self.execute_strategy_single_datapoint(instrument_data['instrument_token'], stock,
+                                                   {"from": start_date, "to": end_date}, backfill=True)
+
+        logging.info("Preloading the data Completed")
 
     def on_close(self, ws, code, reason):
         # On connection close stop the main loop

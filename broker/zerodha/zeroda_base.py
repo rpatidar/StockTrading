@@ -5,7 +5,7 @@ import datetime
 
 tmp_dir = "tmp/"  # if os.name == "nt" else "/tmp/"
 mock_file = tmp_dir + "/mock"
-
+import logging
 
 class ZerodhaServiceBase(TradingService):
     def __init__(self, credential, configuration):
@@ -36,19 +36,20 @@ class ZerodhaServiceBase(TradingService):
             self.kite = kite
 
     def _load_token(self):
-
+        import json
         if not os.path.exists(self.session_file):
             return None
-        session_data = pickle.load(open(self.session_file, "rb"))
-
+        session_data = json.load(open(self.session_file, "r"))
+        session_data['lastSessionDate'] = eval(session_data['lastSessionDate'])
         if session_data['lastSessionDate'] + datetime.timedelta(days=1) > datetime.datetime.now():
             return session_data['token']
         return None
 
     def _save_session(self, token):
-        session = {'lastSessionDate': datetime.datetime.now(), 'token': token}
-        filehandler = open(self.session_file, 'wb')
-        pickle.dump(session, filehandler)
+        import json
+        session = {'lastSessionDate': repr(datetime.datetime.now()), 'token': token}
+        filehandler = open(self.session_file, 'w')
+        json.dump(session, filehandler)
         filehandler.close()
 
     def _instrument_row(self, instruments, stock, exchange=None):
@@ -86,7 +87,7 @@ class ZerodhaServiceBase(TradingService):
             return trading_data
 
     def execute_strategy_single_datapoint(self, instrument_token, stock, stock_config, backfill=False):
-        print("\n ==================================\nBacktesting now: {0} ".format(stock))
+        logging.info("\n ==================================\nBacktesting now: {0} ".format(stock))
         from_date = stock_config['from']
         to_date = stock_config['to']
         trading_data = self._get_trading_data(stock, instrument_token, from_date, to_date)
