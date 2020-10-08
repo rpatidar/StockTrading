@@ -62,6 +62,7 @@ class TradingSystem(object):
                 updated_agg['date'] = agg_datetime
             else:
                 agg_data[current_time] = ohlc
+                ohlc['date'] = agg_datetime
 
         # print("Recording data in DB" + str(tick_data))
 

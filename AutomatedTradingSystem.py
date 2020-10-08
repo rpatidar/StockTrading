@@ -18,7 +18,8 @@ Trading System to Automate the Strategy execution in DB
 
 """
 import logging
-logging.basicConfig(filename='./automatedtrader.log', level=logging.DEBUG)
+
+logging.basicConfig(filename='./automatedtrader.log', level=logging.DEBUG, format='%(asctime)s %(levelname)-8s %(message)s',datefmt='%Y-%m-%d %H:%M:%S')
 
 def play_casino():
     api_key = 'f6jdkd2t30tny1x8'

@@ -2,7 +2,7 @@ import logging
 import threading
 import datetime
 from kiteconnect import KiteTicker
-
+from broker.indan_stock import NINE_AM, FOUR_PM
 from broker.trading_base import TradingService
 
 from zerodha.zeroda_base import ZerodhaServiceBase
@@ -41,7 +41,7 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
             if instrument_data:
                 instrument_ids.append(instrument_data['instrument_token'])
             else:
-                logging.debug("Not able to find the stock:" + stock)
+                logging.error("Not able to find the stock:" + stock)
         logging.info("Subscribing :" + str(instrument_ids))
         ws.subscribe(instrument_ids)
         # Set RELIANCE to tick in `full` mode.
@@ -69,17 +69,20 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
     def on_close(self, ws, code, reason):
         # On connection close stop the main loop
         # Reconnection will not happen after executing `ws.stop()`
-        print("Websocket Error Code: ", code)
-        print("Reason: ", reason)
+        logging.error("Websocket Error Code: ", code)
+        logging.error("Reason: ", reason)
         ws.stop()
+
+        if NINE_AM < datetime.datetime.now() < FOUR_PM:
+            logging.info("Retrying again.")
+            self.init_listening()
+        else:
+            logging.error("not retrying as market is closed")
+
 
     def init_listening(self):
         logging.info("About to Start Zeroda Connect")
-        self.kws.connect()
-
-
-        # t.start()
-        # logging.info("Started the Zeroda Connect")
+        self.kws.connect(threaded=True)
 
     def _background_listener(self):
         # if self.kws.is_connected():
