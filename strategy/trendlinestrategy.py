@@ -5,6 +5,8 @@ from strategy.strategy import Strategy
 from db.storage import StorageHandler
 import logging
 
+from broker.indan_stock import THREE_PM, THREE_FIFTEEN_PM
+
 class TrendlineStrategy(Strategy):
 
     def __init__(self):
@@ -63,13 +65,23 @@ class TrendlineStrategy(Strategy):
             if backfill:
                 continue
 
+            from db.tradebook import TradeBook
+            tb = TradeBook()
+            open_position_info = tb.get_previous_execution_info(instrument_token)
             h, raw_trading_data = self.get_simplified_trading_history(date, instrument_token)
+
+            if open_position_info != None:
+                sell_signal, stop_loss = self.check_for_sell_signal(h, open_position_info)
+                three_fifteen= timestamp.replace(hour=15, minute=15, second=0, microsecond=0)
+                if sell_signal or timestamp > three_fifteen:
+                    current_time = raw_trading_data[-1]['date']
+                    tb.exit("buy", instrument_token, current_time, stop_loss, "Trendline", None)
+                    return
+
             # If the aggregates are not updated should we run
             if len(h) <= self.last_run.get(instrument_token, 0):
                 return
 
-            from db.tradebook import TradeBook
-            tb = TradeBook()
 
             self.last_run[instrument_token] = len(h)
 
@@ -77,8 +89,11 @@ class TrendlineStrategy(Strategy):
             if (len(h) < 5):
                 return
 
-            logging.info("Trying out on the following stock:" + str(instrument_token))
-            open_position_info = tb.get_previous_execution_info(instrument_token)
+            if timestamp > timestamp.replace(hour=15, minute=0, second=0, microsecond=0):
+                return
+
+            #logging.info("Trying out on the following stock:" + str(instrument_token))
+
             if open_position_info == None:  # or previous_strategy_execution_info['buy_ps'] == None:
                 bug_signal, trend_info = self.execute_strategy_to_check_buy_signal(h, raw_trading_data)
                 if bug_signal:  # and two_pm_for_day > trade_time:
@@ -86,11 +101,6 @@ class TrendlineStrategy(Strategy):
                     tb.enter("buy", instrument_token, trade_data['date'], trade_data['close'], "Trendline",
                              {"trend_info": trend_info, "buy_ps": len(h) - 1})
 
-            if open_position_info != None:
-                sell_signal, stop_loss = self.check_for_sell_signal(h, open_position_info)
-                if sell_signal:
-                    current_time = raw_trading_data[-1]['date']
-                    tb.exit("buy", instrument_token, current_time, stop_loss, "Trendline", None)
 
     def get_simplified_trading_history(self, date, instrument_token):
         """
