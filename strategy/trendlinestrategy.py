@@ -1,16 +1,9 @@
 import numpy as np
 
 from strategy.strategy import Strategy
-import datetime
 
 from db.storage import StorageHandler
-
-import copy
-
-import os
-import matplotlib
-import matplotlib.pyplot as plt
-
+import logging
 
 class TrendlineStrategy(Strategy):
 
@@ -42,7 +35,6 @@ class TrendlineStrategy(Strategy):
         # self.last_closure = {}
 
     def close_day(self, date, instrument_token, backfill=False):
-
         if backfill:
             return
 
@@ -51,8 +43,9 @@ class TrendlineStrategy(Strategy):
         # Current aggregate might be incomplete.
         sh = StorageHandler()
         close_price = \
-        self.get_trading_history_for_day(instrument_token, date.date(), False, agg_type=self.agg_time)["trading_data"][
-            -1]['close']
+            self.get_trading_history_for_day(instrument_token, date.date(), False, agg_type=self.agg_time)[
+                "trading_data"][
+                -1]['close']
         from db.tradebook import TradeBook
         tb = TradeBook()
         open_position = tb.get_previous_execution_info(instrument_token)
@@ -61,12 +54,12 @@ class TrendlineStrategy(Strategy):
             tb.exit("buy", instrument_token, date, close_price, "Trendline", None)
 
     def run(self, tick_datas, riskmanagement, timestamp, backfill=False):
+
         for tick_data in tick_datas:
             instrument_token = tick_data['instrument_token']
             trading_data = tick_data['ohlc']
             date = timestamp.date();
             self._update_local_cache(tick_data, timestamp, agg_type=self.agg_time)
-
             if backfill:
                 continue
 
@@ -79,35 +72,37 @@ class TrendlineStrategy(Strategy):
             tb = TradeBook()
 
             self.last_run[instrument_token] = len(h)
-            if (len(h) > 5):
-                open_position_info = tb.get_previous_execution_info(instrument_token)
-                if open_position_info == None:  # or previous_strategy_execution_info['buy_ps'] == None:
-                    bug_signal, trend_info = self.execute_strategy_to_check_buy_signal(h, raw_trading_data)
-                    if bug_signal:  # and two_pm_for_day > trade_time:
-                        trade_data = raw_trading_data[-1]
-                        tb.enter("buy", instrument_token, trade_data['date'], trade_data['close'], "Trendline",
-                                 {"trend_info": trend_info, "buy_ps": len(h) - 1})
 
-                if open_position_info != None:
-                    sell_signal, stop_loss = self.check_for_sell_signal(h, open_position_info)
-                    if sell_signal:
-                        current_time = raw_trading_data[-1]['date']
-                        tb.exit("buy", instrument_token, current_time, stop_loss, "Trendline", None)
+            # wait for enfough data points.
+            if (len(h) < 5):
+                return
 
-    """
-    Looks mostly a hack, need to find if we it can be stored in simple format and pandas can be used to filter it out 
-    """
+            logging.info("Trying out on the following stock:" + str(instrument_token))
+            open_position_info = tb.get_previous_execution_info(instrument_token)
+            if open_position_info == None:  # or previous_strategy_execution_info['buy_ps'] == None:
+                bug_signal, trend_info = self.execute_strategy_to_check_buy_signal(h, raw_trading_data)
+                if bug_signal:  # and two_pm_for_day > trade_time:
+                    trade_data = raw_trading_data[-1]
+                    tb.enter("buy", instrument_token, trade_data['date'], trade_data['close'], "Trendline",
+                             {"trend_info": trend_info, "buy_ps": len(h) - 1})
+
+            if open_position_info != None:
+                sell_signal, stop_loss = self.check_for_sell_signal(h, open_position_info)
+                if sell_signal:
+                    current_time = raw_trading_data[-1]['date']
+                    tb.exit("buy", instrument_token, current_time, stop_loss, "Trendline", None)
 
     def get_simplified_trading_history(self, date, instrument_token):
+        """
+        Looks mostly a hack, need to find if we it can be stored in simple format and pandas can be used to filter it out
+        """
         raw0 = self.get_trading_history_for_day(instrument_token, date, False, agg_type=self.agg_time)
         raw1 = self.get_trading_history_for_day(instrument_token, date, True, agg_type=self.agg_time)
         raw_trading_data = raw1['trading_data'] if raw1 != None else []
         if raw0 != None:
             raw_trading_data = raw_trading_data + raw0['trading_data']
-        """
-        As of now we are checking for 2 days only for trend detection, it can be increased to more data points
-        as we find more learnings. 
-        """
+        # As of now we are checking for 2 days only for trend detection, it can be increased to more data points
+        # as we find more learnings.
         trading_history0 = self.holc_to(raw0, 'low')
         trading_history1 = self.holc_to(raw1, 'low')
         current_aggregate = []
@@ -120,89 +115,87 @@ class TrendlineStrategy(Strategy):
 
     def check_for_sell_signal(self, h, open_position_info):
         trend_info = open_position_info['execution_info']['trend_info']
-        """
-        Detect the stop loss based on the trend line and also keep a margin of .5 percent below trendline. 
-        """
+        # Detect the stop loss based on the trend line and also keep a margin of .5 percent below trendline.
         stop_loss = (len(h) - 1) * (trend_info['slope']) + trend_info['coefficient']
         stop_loss = 0.995 * stop_loss
         sell_signal = stop_loss > h[-1]
 
-        """
-        Not enfough evidence of this helping but sounds better
-        """
+        # Not enough evidence of this helping but sounds better
         if not sell_signal:
             if (((h[-1] - open_position_info['buy_price']) / open_position_info['buy_price']) * 100) > 3:
                 return True, h[-1]
 
-        """
-        Lets not sell if the loss is not high..
-        """
+        # Lets not sell if the loss is not high,
+        # very critical in avoiding unnecessary losses.
         if sell_signal and (((h[-1] - open_position_info['buy_price']) / open_position_info['buy_price']) * 100) < 0.5:
             return False, stop_loss
         return sell_signal, stop_loss
 
     def execute_strategy_to_check_buy_signal(self, h, raw_trading_data):
-        mintrend, minwindows = self.detect_trend(h)
-
         """
         minwindows values return following format : [],(X,X,X,X,X,X)        
         (1) Array of Trend points - 
         (2) Touple of following values 
             (1) -- Slope, 
-            (2) -- Cofficient/Regression Intercept, 
+            (2) -- Coefficient/Regression Intercept,
             (3) -- ys=Sum of squre residual for the expected Y
             (4) -- ser = Standard Error of Slope
             (5) -- SigmaM=Standard Error of Intercept  
             (6) -- Sum of Area because of error gaps           
         """
-
+        mintrend, minwindows = self.detect_trend(h)
         trend_info = {}
         bug_signal = False
         for trends in minwindows:
             best_trend = None
             for trend in trends:
+
+                # Total percentage changes in the Slope (from the starting to end )
                 percentage_change = ((h[-1] - h[trend[0][0]]) / h[trend[0][0]]) * 100
+
+                # Based on the trend how many percentage is changed per data point in the trned?
                 percentage_change_per_data_points = percentage_change / (trend[0][-1] - trend[0][0])
+
+                # ?
                 error_slope_pct = (trend[1][3] / h[trend[0][0]]) * 100
+
+                # Convert the slop in terms of actual count to the percentage so its remain
+                # same for all stocks
                 slope_percentage = (trend[1][0] / h[trend[0][0]]) * 100
 
-                # print("Slope-percentage:" + str(trend[1][0]/ h[trend[0][0]]))
+                # Magic number derived based on trial and error
                 if (percentage_change_per_data_points > 0.080 and slope_percentage > 0.080):
+
+                    # Find the best Slope if there are multiple meeting the condition.
                     if trend_info.get("slope") == None or (
                             trend_info.get("slope") != None and trend_info.get("slope") < trend[1][0]):
                         temp_closing_index = trend[0][-1]
+
+                        # Only use this trend if the trend is closing on the last data point.
                         if (len(h) - 1 - temp_closing_index) == 0:
-                            # Record the current trend line info
-                            # best_trend = trend
+                            # Book keeping information on why we bought it here
                             trend_info["trendpoints"] = [
                                 {"price": raw_trading_data[i]['low'], "date": raw_trading_data[i]['date']} for i in
                                 trend[0]]
+                            # Y=MX+B
+                            # Current Slope (M)
                             trend_info["slope"] = trend[1][0]
+                            # Intercept(B)
                             trend_info['coefficient'] = trend[1][1]
                             gap_percentage = (100 * (
-                                        (h[-1] - ((len(h) - 1) * (trend_info['slope']) + trend_info['coefficient'])) /
-                                        h[-1]))
-                            # print("trend-info" +  str(trend_info))
-                            # print("Trend-Points:" + str(trend[1]))
-                            # print("Slope-Percentage" + str(slope_percentage) +" ErrorPercentage="+ str(error_slope_pct))
-                            import math
-                            # print("Gap=" + str(gap_percentage))
-                            # print("Current:"  + str(h[-1]))
-                            # print("Projected:" +  str((len(h) - 1) * (trend_info['slope']) + trend_info['coefficient']))
+                                    (h[-1] - ((len(h) - 1) * (trend_info['slope']) + trend_info['coefficient'])) /
+                                    h[-1]))
                             bug_signal = gap_percentage < 0.4 and gap_percentage > -0.4
-        # if best_trend != None:e4
-        #     percentage_change1 = ((h[-1]-h[best_trend[0][0]]) / h[best_trend[0][0]]) * 100
-        #     percentage_change_per_data_points = percentage_change1 / (best_trend[0][-1] - best_trend[0][0])
-        #     #print("percentage-change" + str(percentage_change_per_data_points))
+
+                            logging.info("BuySignal : " + str(bug_signal))
 
         return bug_signal, trend_info
 
-    """
-        Actual trend line detection code
-        Extracted the code from: https://github.com/GregoryMorse/trendln 
-    """
-
     def detect_trend(self, h, window=30, errpct=1):
+        """
+            Actual trend line detection code
+            Extracted the code from: https://github.com/GregoryMorse/trendln
+        """
         len_h = len(h)
         min_h, max_h = min(h), max(h)
 
@@ -224,10 +217,13 @@ class TrendlineStrategy(Strategy):
                         CurIdxs = list(trend[i][0])  # restart search from here
             return list(filter(lambda val: val[0] != [], trend))
 
-        def measure_area(trendline, isMin, h):  # Reimann sum of line to discrete time series data
-            # first determine the time range, and subtract the line values to obtain a single function
-            # support subtracts the line minus the series and eliminates the negative values
-            # resistances subtracts the series minus the line and eliminate the negatives
+        def measure_area(trendline, isMin, h):
+            """
+            Reimann sum of line to discrete time series data
+            first determine the time range, and subtract the line values to obtain a single function
+            support subtracts the line minus the series and eliminates the negative values
+            resistances subtracts the series minus the line and eliminate the negatives
+            """
             base = trendline[0][0]
             m, b, ser = trendline[1][0], trendline[1][1], h[base:trendline[0][-1] + 1]
             return sum([max(0, (m * (x + base) + b) - y if isMin else y - (m * (x + base) + b)) for x, y in

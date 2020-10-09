@@ -8,6 +8,9 @@ from broker.trading_base import TradingService
 from zerodha.zeroda_base import ZerodhaServiceBase
 
 class ZerodhaServiceOnline(ZerodhaServiceBase):
+    """
+        Realtime tick provider data
+    """
     def __init__(self, credential, configuration):
         super(ZerodhaServiceOnline, self).__init__(credential, configuration)
         self.intresting_stocks = self.configuration['stocks_to_subscribe']
@@ -69,16 +72,16 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
             instrument_data = self._instrument_row(self.instruments, stock)
             if instrument_data == None:
                 continue
-            self.execute_strategy_single_datapoint(instrument_data['instrument_token'], stock,
-                                                   {"from": start_date, "to": end_date}, backfill=True)
+            self.execute_strategy_single_stock_historical(instrument_data['instrument_token'], stock,
+                                                   {"from": start_date, "to": datetime.now()}, backfill=True)
 
         logging.info("Preloading the data Completed")
 
     def on_close(self, ws, code, reason):
         # On connection close stop the main loop
         # Reconnection will not happen after executing `ws.stop()`
-        logging.error("Websocket Error Code: ", code)
-        logging.error("Reason: ", reason)
+        logging.error("Websocket Error Code: " +  str(code))
+        logging.error("Reason: " +  str(reason))
         ws.stop()
 
         if NINE_AM < datetime.datetime.now() < FOUR_PM:

@@ -86,7 +86,17 @@ class ZerodhaServiceBase(TradingService):
             filehandler.close()
             return trading_data
 
-    def execute_strategy_single_datapoint(self, instrument_token, stock, stock_config, backfill=False):
+    def execute_strategy_single_stock_historical(self, instrument_token, stock, stock_config, backfill=False):
+        """
+        Run trading on the historical data
+        :param instrument_token:
+        :param stock:
+        :param stock_config:
+        :param backfill:
+            don't execute just mock the data to update the aggregates
+        :return:
+        """
+
         logging.info("\n ==================================\nBacktesting now: {0} ".format(stock))
         from_date = stock_config['from']
         to_date = stock_config['to']
