@@ -1,9 +1,12 @@
+import argparse
 from strategy.trendlinestrategy import TrendlineStrategy
-
-from zerodha.zerodha_live_trading import ZerodhaServiceOnline
-from zerodha.zeroda_intraday_backtester import ZerodhaServiceIntraDay
+from broker.zerodha.zerodha_live_trading import ZerodhaServiceOnline
+from broker.zerodha.zeroda_intraday_backtester import ZerodhaServiceIntraDay
 from db import storage
 from tradingsystem.tradingsystem import TradingSystem
+from db.storage import StorageHandler
+from db.tradebook import TradeBook
+from trading_options import TradingOptions
 
 """
 Trading System to Automate the Strategy execution in DB
@@ -86,13 +89,33 @@ def play_casino_live():
 # import yappi
 # yappi.set_clock_type("cpu") # Use set_clock_type("wall") for wall time
 # yappi.start()
-
-from db.storage import StorageHandler
-
 # play_casino()
-play_casino()
-
+# play_casino()
 # yappi.get_func_stats().print_all()
 # yappi.get_thread_stats().print_all()
+
+def run():
+    options = TradingOptions()
+    sh = StorageHandler()
+    tradeRunner = ZerodhaServiceOnline if options.args.mode == 'live' else ZerodhaServiceIntraDay
+    credentials = {"api_key": "f6jdkd2t30tny1x8", "api_secret": "eiuq7ln5pp8ae6uc6cjulhap3zc3bsdo"}
+    configuration = None
+    if options.args.mode == 'live':
+        configuration = {"stocks_to_subscribe": options.getStocks(), "stocks_in_fullmode": []}
+    else:
+        stock_input = dict((s, {"from": options.args.start, "to": options.args.end}) for s in options.getStocks())
+        configuration = {"back_testing_config": {"stocks_config": stock_input}}
+    # run trading system
+    tradingSystem = TradingSystem(credentials, configuration, tradeRunner, [TrendlineStrategy()])
+    tradingSystem.run()
+    # Use tradebook and get summary
+    tradeBook = TradeBook()
+    if options.args.mode == 'live':
+        from db.shadow_trading_service import ShadowTradingService
+        tradeBook.register_trading_service(ShadowTradingService())    
+    tradeBook.summary()
+
+# Execute the command
+run()
 
 input("Press enter to close this progra...")

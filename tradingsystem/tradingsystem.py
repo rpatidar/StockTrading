@@ -1,5 +1,5 @@
 from db.storage import StorageHandler
-from tradingapi import TradingAPI
+from broker.tradingapi import TradingAPI
 
 
 class TradingSystem(object):

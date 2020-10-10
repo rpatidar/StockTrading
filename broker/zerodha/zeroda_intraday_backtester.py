@@ -1,4 +1,4 @@
-from zerodha.zeroda_base import ZerodhaServiceBase
+from broker.zerodha.zeroda_base import ZerodhaServiceBase
 
 from concurrent.futures import ThreadPoolExecutor
 

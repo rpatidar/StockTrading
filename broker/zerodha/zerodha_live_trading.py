@@ -5,7 +5,7 @@ from kiteconnect import KiteTicker
 from broker.indan_stock import NINE_AM, FOUR_PM
 from broker.trading_base import TradingService
 
-from zerodha.zeroda_base import ZerodhaServiceBase
+from broker.zerodha.zeroda_base import ZerodhaServiceBase
 
 class ZerodhaServiceOnline(ZerodhaServiceBase):
     """
