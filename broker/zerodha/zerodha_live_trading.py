@@ -22,7 +22,7 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         # initialize the thread to handle the tick data in a seperate
         self.q = queue.Queue()
         self.queue_handler = threading.Thread(target=self.queue_based_tick_handler, args=());
-        self.queue_handler.run()
+        #self.queue_handler.run()
 
     def __setup(self):
         self.kws = KiteTicker(self.api_key, self.access_token)
@@ -35,7 +35,7 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         """Outside business range update ticks should be ignored"""
         if not (NINE_AM < datetime.datetime.now() < FOUR_PM):
             return
-        
+
         # Callback to receive ticks.
         logging.debug("Ticks: {}".format(ticks))
         # Little approximation on time.
@@ -87,17 +87,20 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
             self._update_tick_data(ticks, timestamp)
 
     def on_close(self, ws, code, reason):
-        # On connection close stop the main loop
-        # Reconnection will not happen after executing `ws.stop()`
         logging.error("Websocket Error Code: " +  str(code))
         logging.error("Reason: " +  str(reason))
+        #Comment the code for debugging
+        # if NINE_AM < datetime.datetime.now() < FOUR_PM:
+        #     logging.info("Stopping the reconnect as outside of bussiness hours")
         ws.stop()
 
-        if NINE_AM < datetime.datetime.now() < FOUR_PM:
-            logging.info("Retrying again.")
-            self.init_listening()
-        else:
-            logging.error("not retrying as market is closed")
+        # On connection close stop the main loop
+        # Reconnection will not happen after executing `ws.stop()`
+        #
+        #     logging.info("Retrying again.")
+        #     self.init_listening()
+        # else:
+        #     logging.error("not retrying as market is closed")
 
 
     def init_listening(self):
