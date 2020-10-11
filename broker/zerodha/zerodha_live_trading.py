@@ -6,6 +6,7 @@ from broker.indan_stock import NINE_AM, FOUR_PM
 from broker.trading_base import TradingService
 
 from broker.zerodha.zeroda_base import ZerodhaServiceBase
+import queue,threading
 
 class ZerodhaServiceOnline(ZerodhaServiceBase):
     """
@@ -17,7 +18,11 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         self.intresting_stocks_full_mode = self.configuration['stocks_in_fullmode']
         self.__setup()
         self._preload_historical_data()
-        # initialize the thread
+
+        # initialize the thread to handle the tick data in a seperate
+        self.q = queue.Queue()
+        self.queue_handler = threading.Thread(target=self.queue_based_tick_handler, args=());
+        self.queue_handler.run()
 
     def __setup(self):
         self.kws = KiteTicker(self.api_key, self.access_token)
@@ -30,13 +35,12 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         """Outside business range update ticks should be ignored"""
         if not (NINE_AM < datetime.datetime.now() < FOUR_PM):
             return
-
+        
         # Callback to receive ticks.
         logging.debug("Ticks: {}".format(ticks))
         # Little approximation on time.
-
         #t = threading.Thread(target=self._update_tick_data, args=(ticks, datetime.datetime.date.now()))
-        self._update_tick_data(ticks, datetime.datetime.now())
+        self.q.put((ticks, datetime.datetime.now()))
 
     def on_connect(self, ws, response):
         # Callback on successful connect.
@@ -76,6 +80,11 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
                                                    {"from": start_date, "to": datetime.now()}, backfill=True)
 
         logging.info("Preloading the data Completed")
+
+    def queue_based_tick_handler(self):
+        while True:
+            ticks, timestamp  = self.q.get(block=True)
+            self._update_tick_data(ticks, timestamp)
 
     def on_close(self, ws, code, reason):
         # On connection close stop the main loop
