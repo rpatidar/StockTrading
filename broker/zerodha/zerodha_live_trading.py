@@ -30,6 +30,7 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         self.kws.on_ticks = self.on_ticks
         self.kws.on_connect = self.on_connect
         self.kws.on_close = self.on_close
+        self.kws.on_reconnect = self.on_reconnect
 
     def on_ticks(self, ws, ticks):
         """Outside business range update ticks should be ignored"""
@@ -59,6 +60,10 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         # [738561]
         # ws.set_mode(ws.MODE_FULL, self.intresting_stocks_full_mode)
 
+    # Callback when reconnect is on progress
+    def on_reconnect(self, ws, attempts_count):
+        print("Reconnecting: {}".format(attempts_count))
+        logging.info("Reconnecting: {}".format(attempts_count))
 
     def _preload_historical_data(self):
         """
@@ -92,7 +97,7 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         #Comment the code for debugging
         # if NINE_AM < datetime.datetime.now() < FOUR_PM:
         #     logging.info("Stopping the reconnect as outside of bussiness hours")
-        ws.stop()
+        #ws.stop()
 
         # On connection close stop the main loop
         # Reconnection will not happen after executing `ws.stop()`
