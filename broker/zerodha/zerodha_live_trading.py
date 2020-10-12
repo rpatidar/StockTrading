@@ -2,7 +2,7 @@ import logging
 import threading
 import datetime
 from kiteconnect import KiteTicker
-from broker.indan_stock import NINE_AM, FOUR_PM
+from broker.indan_stock import NINE_AM, NINE_FIFTEEN_AM, THREE_FORTY_PM, FOUR_PM
 from broker.trading_base import TradingService
 
 from broker.zerodha.zeroda_base import ZerodhaServiceBase
@@ -24,7 +24,6 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         self.q = queue.Queue()
         self.queue_handler = threading.Thread(target=self.queue_based_tick_handler, args=());
         self.queue_handler.start()
-        #self.queue_handler.run()
 
     def __setup(self):
         self.kws = KiteTicker(self.api_key, self.access_token)
@@ -36,7 +35,7 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
 
     def on_ticks(self, ws, ticks):
         """Outside business range update ticks should be ignored"""
-        if not (NINE_AM < datetime.datetime.now() < FOUR_PM):
+        if not (NINE_FIFTEEN_AM < datetime.datetime.now() < THREE_FORTY_PM):
             return
 
         # Callback to receive ticks.
@@ -44,6 +43,7 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         # Little approximation on time.
         #t = threading.Thread(target=self._update_tick_data, args=(ticks, datetime.datetime.date.now()))
         self.q.put((ticks, datetime.datetime.now()))
+        #self._update_tick_data(ticks, datetime.datetime.now())
 
     def on_connect(self, ws, response):
         # Callback on successful connect.
