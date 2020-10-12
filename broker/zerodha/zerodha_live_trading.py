@@ -17,11 +17,13 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         self.intresting_stocks = self.configuration['stocks_to_subscribe']
         self.intresting_stocks_full_mode = self.configuration['stocks_in_fullmode']
         self.__setup()
-        self._preload_historical_data()
-
+        #Start warmup exercise in parallel
+        self.warmup_tracker = {}
+        threading.Thread(target=self._preload_historical_data).start()
         # initialize the thread to handle the tick data in a seperate
         self.q = queue.Queue()
         self.queue_handler = threading.Thread(target=self.queue_based_tick_handler, args=());
+        self.queue_handler.start()
         #self.queue_handler.run()
 
     def __setup(self):
@@ -83,13 +85,21 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
                 continue
             self.execute_strategy_single_stock_historical(instrument_data['instrument_token'], stock,
                                                    {"from": start_date, "to": datetime.now()}, backfill=True)
+            self.warmup_tracker[instrument_data['instrument_token']] = True
 
         logging.info("Preloading the data Completed")
 
     def queue_based_tick_handler(self):
         while True:
             ticks, timestamp  = self.q.get(block=True)
-            self._update_tick_data(ticks, timestamp)
+
+            #Only use stocks whose current data is loaded in memory already
+            filtered_ticks = []
+            for t in ticks:
+                if t['instrument_token'] in self.warmup_tracker:
+                    filtered_ticks.append(t)
+
+            self._update_tick_data(filtered_ticks, timestamp)
 
     def on_close(self, ws, code, reason):
         logging.error("Websocket Error Code: " +  str(code))
@@ -116,4 +126,3 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         # if self.kws.is_connected():
             # Connect in a asynchronous threads
         pass
-
