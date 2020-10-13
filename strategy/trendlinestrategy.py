@@ -44,6 +44,10 @@ class TrendlineStrategy(Strategy):
         # TODO: Fix the aggregate for the last minute, as of now the data is loaded for the previous candle, 5 minute aggregate before as
         # Current aggregate might be incomplete.
         sh = StorageHandler()
+        data = self.get_trading_history_for_day(instrument_token, date.date(), False, agg_type=self.agg_time)
+        if data is None:
+            logging.info("Received empty trading history data on "+ str(date.date()) + " for " + str(instrument_token))
+            return
         close_price = \
             self.get_trading_history_for_day(instrument_token, date.date(), False, agg_type=self.agg_time)[
                 "trading_data"][
@@ -92,7 +96,7 @@ class TrendlineStrategy(Strategy):
             if timestamp > timestamp.replace(hour=15, minute=0, second=0, microsecond=0):
                 return
 
-            #logging.info("Trying out on the following stock:" + str(instrument_token))
+            logging.info("Trying out on the following stock:" + str(instrument_token) + " timestamp:" + str(timestamp))
 
             if open_position_info == None:  # or previous_strategy_execution_info['buy_ps'] == None:
                 bug_signal, trend_info = self.execute_strategy_to_check_buy_signal(h, raw_trading_data)
