@@ -103,13 +103,15 @@ class ZerodhaServiceBase(TradingService):
         trading_data = self._get_trading_data(stock, instrument_token, from_date, to_date)
         previous_date = None
         for trade_data in trading_data:
+            #Destroying the data immutability, should fix in the right way
+            trade_data['date'] = trade_data['date'].replace(tzinfo=None)
             # ohlc = copy.deepcopy(ohlcp)
             if previous_date != None and previous_date.date() != trade_data['date'].date():
                 self.close_day(previous_date, instrument_token)
                 previous_date = trade_data['date']
-            previous_date = trade_data['date']
+
+            timestamp = previous_date = trade_data['date']
             decorated_trading_data = {'instrument_token': instrument_token, 'ohlc': trade_data}
-            timestamp = trade_data['date']
             """5 minute aggregate publish"""
             """1 minute - irelevent"""
             self._update_tick_data([decorated_trading_data], timestamp, backfill=backfill)
