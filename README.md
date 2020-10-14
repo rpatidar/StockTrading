@@ -12,7 +12,7 @@
 > python3.6 AutomatedTradingSystem.py audit --start 2020-09-01 --end 2020-09-30 -l ENDURANCE  
 > python3.6 AutomatedTradingSystem.py live --start 2020-09-01 --end 2020-09-30 -l ENDURANCE  
 > python3.6 AutomatedTradingSystem.py audit --start 2020-09-01 --end 2020-09-30 -f '../stock.txt'  
-> python AutomatedTradingSystem.py live -f D:\workspace\stocks_100.txt  
+> python AutomatedTradingSystem.py live -f stocks_100.txt
 
 # Debug
 ## If getting error "ModuleNotFoundError: No module named 'zerodha'"

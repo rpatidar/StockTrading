@@ -1,6 +1,7 @@
 import logging
 import threading
 import datetime
+import json
 from kiteconnect import KiteTicker
 from broker.indan_stock import NINE_AM, NINE_FIFTEEN_AM, THREE_FORTY_PM, FOUR_PM
 from broker.trading_base import TradingService
@@ -24,6 +25,7 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         self.q = queue.Queue()
         self.queue_handler = threading.Thread(target=self.queue_based_tick_handler, args=());
         self.queue_handler.start()
+        self.tick_file_handler = open("./tmp/" + datetime.datetime.now().strftime("%Y-%m-%d") + ".tick", 'a+')
 
     def __setup(self):
         self.kws = KiteTicker(self.api_key, self.access_token)
@@ -38,8 +40,12 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         if not (NINE_FIFTEEN_AM < datetime.datetime.now() < THREE_FORTY_PM):
             return
 
+        if datetime.datetime.now() > THREE_FORTY_PM :
+            self.tick_file_handler.close()
+
         # Callback to receive ticks.
-        logging.debug("Ticks: {}".format(ticks))
+        self.tick_file_handler.write(str(datetime.datetime.now()) + "\t" + json.dumps(ticks) + "\n")
+        logging.debug("Received ticks")
         # Little approximation on time.
         #t = threading.Thread(target=self._update_tick_data, args=(ticks, datetime.datetime.date.now()))
         self.q.put((ticks, datetime.datetime.now()))

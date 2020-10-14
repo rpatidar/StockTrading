@@ -1,5 +1,4 @@
 import numpy as np
-
 from strategy.strategy import Strategy
 
 from db.storage import StorageHandler
@@ -96,7 +95,10 @@ class TrendlineStrategy(Strategy):
             if timestamp > timestamp.replace(hour=15, minute=0, second=0, microsecond=0):
                 return
 
-            logging.info("Trying out on the following stock:" + str(instrument_token) + " timestamp:" + str(timestamp))
+            logging.info("Trying out on the following stock:" + str(instrument_token) + " timestamp:" + str(timestamp) + " len:" + str(len(h)))
+            if instrument_token == 4818433:
+                logging.debug("Raw trading data:" + str(raw_trading_data))
+
             #
             # This are the info before i forgot
             # 1. This gets called as soon as the last data point is completed.
