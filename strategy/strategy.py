@@ -43,12 +43,18 @@ class Strategy:
             print("Ignoring the script update=" + str(script) + " on date=" + str(timestamp) + " because of null data")
             return None
 
-    """
-        I personally don't like the way this method is written, just thought to build some aggregate by date for easy processing. 
-        The task of this function is to update the aggregate of previous timestamp in the local cache if not already done.
-    """
+
 
     def _update_local_cache(self, tick_data, timestamp, agg_type=1):
+        """
+            I personally don't like the way this method is written, just thought to build some aggregate by date for easy processing.
+            The task of this function is to update the aggregate of previous timestamp in the local cache if not already done.
+
+            Working logic of this method:
+            1. We only update the aggregated data which is completed, partial completed data is not updated
+            2. Data is pulled from the central Stored cache and current tick data does not impact anything.
+            3. If current tick is for 9:26:00 , this will be updating the aggregated for 9:20 to 9:25.
+        """
         self.lock.acquire()
         current_minute, current_date, last_aggregate_time = self.get_previous_aggregate_timestamp(timestamp, agg_type)
         instrument_token = tick_data['instrument_token']

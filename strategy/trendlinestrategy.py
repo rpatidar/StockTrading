@@ -97,7 +97,10 @@ class TrendlineStrategy(Strategy):
                 return
 
             logging.info("Trying out on the following stock:" + str(instrument_token) + " timestamp:" + str(timestamp))
-
+            #
+            # This are the info before i forgot
+            # 1. This gets called as soon as the last data point is completed.
+            # 2. raw_trading_data[-1]['close']  points to the most recent data point.
             if open_position_info == None:  # or previous_strategy_execution_info['buy_ps'] == None:
                 bug_signal, trend_info = self.execute_strategy_to_check_buy_signal(h, raw_trading_data)
                 if bug_signal:  # and two_pm_for_day > trade_time:
