@@ -74,7 +74,7 @@ class TrendlineStrategy(Strategy):
             h, raw_trading_data = self.get_simplified_trading_history(date, instrument_token)
 
             if open_position_info != None:
-                sell_signal, stop_loss = self.check_for_sell_signal(h, open_position_info)
+                sell_signal, stop_loss = self.check_for_sell_signal(h, open_position_info, tick_data )
                 three_fifteen= timestamp.replace(hour=15, minute=15, second=0, microsecond=0)
                 if sell_signal or timestamp > three_fifteen:
                     current_time = raw_trading_data[-1]['date']
@@ -85,7 +85,6 @@ class TrendlineStrategy(Strategy):
             if len(h) <= self.last_run.get(instrument_token, 0):
                 return
 
-
             self.last_run[instrument_token] = len(h)
 
             # wait for enfough data points.
@@ -95,6 +94,9 @@ class TrendlineStrategy(Strategy):
             if timestamp > timestamp.replace(hour=15, minute=0, second=0, microsecond=0):
                 return
 
+            # This are the info before i forgot
+            # 1. This gets called as soon as the last data point is completed.
+            # 2. raw_trading_data[-1]['close']  points to the most recent data point.
             logging.info("Trying out on the following stock:" + str(instrument_token) + " timestamp:" + str(timestamp) + " len:" + str(len(h)))
             if instrument_token == 4818433:
                 logging.debug("Raw trading data:" + str(raw_trading_data))
@@ -104,10 +106,12 @@ class TrendlineStrategy(Strategy):
             # 1. This gets called as soon as the last data point is completed.
             # 2. raw_trading_data[-1]['close']  points to the most recent data point.
             if open_position_info == None:  # or previous_strategy_execution_info['buy_ps'] == None:
-                bug_signal, trend_info = self.execute_strategy_to_check_buy_signal(h, raw_trading_data)
+                bug_signal, trend_info = self.execute_strategy_to_check_buy_signal(h, raw_trading_data, tick_data, timestamp)
                 if bug_signal:  # and two_pm_for_day > trade_time:
-                    trade_data = raw_trading_data[-1]
-                    tb.enter("buy", instrument_token, trade_data['date'], trade_data['close'], "Trendline",
+                    #Very Little bit of approximation  on the points,
+                    # but a major in case if its across the days
+                    #trade_data = raw_trading_data[-1]
+                    tb.enter("buy", instrument_token, tick_data['ohlc']['date'], tick_data['ohlc']['close'], "Trendline",
                              {"trend_info": trend_info, "buy_ps": len(h) - 1})
 
 
@@ -132,25 +136,26 @@ class TrendlineStrategy(Strategy):
         h = current_aggregate
         return h, raw_trading_data
 
-    def check_for_sell_signal(self, h, open_position_info):
+    def check_for_sell_signal(self, h, open_position_info, tick_data):
         trend_info = open_position_info['execution_info']['trend_info']
         # Detect the stop loss based on the trend line and also keep a margin of .5 percent below trendline.
-        stop_loss = (len(h) - 1) * (trend_info['slope']) + trend_info['coefficient']
+        stop_loss = (len(h)) * (trend_info['slope']) + trend_info['coefficient']
         stop_loss = 0.995 * stop_loss
-        sell_signal = stop_loss > h[-1]
+        sell_signal = stop_loss > tick_data['ohlc']['close']
 
         # Not enough evidence of this helping but sounds better
         if not sell_signal:
-            if (((h[-1] - open_position_info['buy_price']) / open_position_info['buy_price']) * 100) > 3:
+            #TODO: Run permutation on what is the best max profit to book.
+            if (((tick_data['ohlc']['close'] - open_position_info['buy_price']) / open_position_info['buy_price']) * 100) > 3:
                 return True, h[-1]
 
         # Lets not sell if the loss is not high,
         # very critical in avoiding unnecessary losses.
-        if sell_signal and (((h[-1] - open_position_info['buy_price']) / open_position_info['buy_price']) * 100) < 0.5:
+        if sell_signal and (((tick_data['ohlc']['close'] - open_position_info['buy_price']) / open_position_info['buy_price']) * 100) < 0.5:
             return False, stop_loss
         return sell_signal, stop_loss
 
-    def execute_strategy_to_check_buy_signal(self, h, raw_trading_data):
+    def execute_strategy_to_check_buy_signal(self, h, raw_trading_data, tick_data, timestamp):
         """
         minwindows values return following format : [],(X,X,X,X,X,X)        
         (1) Array of Trend points - 
@@ -202,7 +207,7 @@ class TrendlineStrategy(Strategy):
                             # Intercept(B)
                             trend_info['coefficient'] = trend[1][1]
                             gap_percentage = (100 * (
-                                    (h[-1] - ((len(h) - 1) * (trend_info['slope']) + trend_info['coefficient'])) /
+                                    (tick_data['ohlc']['close'] - ((len(h) - 1) * (trend_info['slope']) + trend_info['coefficient'])) /
                                     h[-1]))
                             bug_signal = gap_percentage < 0.4 and gap_percentage > -0.4
 
