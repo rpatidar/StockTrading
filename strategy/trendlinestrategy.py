@@ -59,7 +59,6 @@ class TrendlineStrategy(Strategy):
             tb.exit("buy", instrument_token, date, close_price, "Trendline", None)
 
     def run(self, tick_datas, riskmanagement, timestamp, backfill=False):
-
         for tick_data in tick_datas:
             instrument_token = tick_data['instrument_token']
             trading_data = tick_data['ohlc']
@@ -97,7 +96,7 @@ class TrendlineStrategy(Strategy):
             # This are the info before i forgot
             # 1. This gets called as soon as the last data point is completed.
             # 2. raw_trading_data[-1]['close']  points to the most recent data point.
-            logging.info("Trying out on the following stock:" + str(instrument_token) + " timestamp:" + str(timestamp) + " len:" + str(len(h)))
+            logging.info("Trying out on the following stock:" + str(instrument_token) + " timestamp:" + str(timestamp) + " len:" + str(len(h)) + " price:" + str(h))
             if instrument_token == 4818433:
                 logging.debug("Raw trading data:" + str(raw_trading_data))
 

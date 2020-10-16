@@ -105,7 +105,10 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
                 if t['instrument_token'] in self.warmup_tracker:
                     filtered_ticks.append(t)
 
-            self._update_tick_data(filtered_ticks, timestamp)
+            decorated_ticks = [ { "instrument_token": tick['instrument_token'], "ohlc": { "date": timestamp, "open": tick['last_price'],  "high": tick['last_price'], "low": tick['last_price'], "close": tick['last_price'] } } for tick in filtered_ticks]
+            self._update_tick_data(decorated_ticks, timestamp)
+            self.q.task_done()
+
 
     def on_close(self, ws, code, reason):
         logging.error("Websocket Error Code: " +  str(code))
