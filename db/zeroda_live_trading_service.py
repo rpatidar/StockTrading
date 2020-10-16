@@ -1,5 +1,12 @@
 import logging
 from broker.zerodha.zeroda_base import ZerodhaServiceBase
+import telegram
+
+b = telegram.bot.Bot("1370331323:AAHe9lBTseBxn5KvA8v2SQbGp8RGbLToa30")
+
+
+
+
 
 class ZerodhaLiveTradingService(ZerodhaServiceBase):
 
@@ -10,6 +17,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
     def enter(self, type, instrument_token, date, price, strategy):
         symbol, exchange = self._get_symbol_and_exchange(instrument_token)
         logging.info("+Got Enter for {0} at date {1}".format(instrument_token, str(date)))
+        b.send_message(chat_id=-478351687, text="+Got Enter for {0} at date {1}".format(instrument_token, str(date)))
 
         order_id = self.kite.place_order(tradingsymbol=symbol,
                                     exchange=exchange,
@@ -24,6 +32,8 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
 
     def exit(self, type, instrument_token, date, price, strategy):
         logging.info("-Got Exit for {0} at date {1}".format(instrument_token, str(date)))
+        b.send_message(chat_id=-478351687, text="-Got Exit for {0} at date {1}".format(instrument_token, str(date)))
+
         symbol, exchange = self._get_symbol_and_exchange(instrument_token)
         order_id = self.kite.place_order(tradingsymbol=symbol,
                                     exchange=exchange,
