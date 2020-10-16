@@ -3,9 +3,9 @@ from broker.zerodha.zeroda_base import ZerodhaServiceBase
 
 class ZerodhaLiveTradingService(ZerodhaServiceBase):
 
-    def __init__(self):
+    def __init__(self, credential):
         # Ignore the credentail as its hard coded inside as of now.
-        super(ZerodhaLiveTradingService, self).__init__({"api_key": "f6jdkd2t30tny1x8", "api_secret": "eiuq7ln5pp8ae6uc6cjulhap3zc3bsdo"}, None)
+        super(ZerodhaLiveTradingService, self).__init__(credential, None)
 
     def enter(self, type, instrument_token, date, price, strategy):
         symbol, exchange = self._get_symbol_and_exchange(instrument_token)

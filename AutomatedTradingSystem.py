@@ -115,7 +115,10 @@ def run():
     tradeBook = TradeBook()
     if options.args.mode == 'live':
         from db.shadow_trading_service import ShadowTradingService
-        tradeBook.register_trading_service(ShadowTradingService())    
+        tradeBook.register_trading_service(ShadowTradingService())
+        # from db.zeroda_live_trading_service import ZerodhaLiveTradingService
+        # tradeBook.register_trading_service(ZerodhaLiveTradingService(credentials))
+         
     tradeBook.summary()
 
 # Execute the command
