@@ -60,6 +60,13 @@ class ZerodhaServiceBase(TradingService):
                     return instrument_data
         return None
 
+    def _get_symbol_and_exchange(self, instrument_token):
+        instruments = self._get_instrumentnts()
+        for instrument_data in instruments:
+            if str(instrument_data['instrument_token']) == str(instrument_token):
+                return instrument_data['tradingsymbol'], instrument_data['exchange']
+        return None
+
     def _get_instrumentnts(self):
         if os.path.exists(self.instrument_file):
             self.instruments = pickle.load(open(self.instrument_file, "rb"))
