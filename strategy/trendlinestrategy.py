@@ -75,7 +75,8 @@ class TrendlineStrategy(Strategy):
 
             if open_position_info != None:
                 sell_signal, stop_loss = self.check_for_sell_signal(h, open_position_info, tick_data)
-                if sell_signal or timestamp > get_datetime(15, 15):
+                three_fifteen = timestamp.replace(hour=15, minute=15, second=0, microsecond=0)
+                if sell_signal or timestamp > three_fifteen:
                     current_time = raw_trading_data[-1]['date']
                     tb.exit("buy", instrument_token, current_time, stop_loss, "Trendline", None)
                     return
@@ -90,7 +91,7 @@ class TrendlineStrategy(Strategy):
             if (len(h) < 5):
                 return
 
-            if timestamp > get_datetime(15, 0):
+            if timestamp > timestamp.replace(hour=15, minute=0, second=0, microsecond=0):
                 return
 
             # This are the info before i forgot
