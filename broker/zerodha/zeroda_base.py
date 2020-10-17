@@ -25,7 +25,7 @@ class ZerodhaServiceBase(TradingService):
             kite = KiteConnect(self.api_key, self.api_secret)
             token = self._load_token();
             if not token:
-                webbrowser.open_new_tab(KiteConnect(self.api_key, self.api_secret).login_url())
+                print("Open this link in browser to login", KiteConnect(self.api_key, self.api_secret).login_url())
                 url = input("Enter Your token URL here")
                 tmp_dir + "/session_file"
                 data = kite.generate_session(url.split("request_token=")[1].split("&action")[0],
