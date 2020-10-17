@@ -5,10 +5,6 @@ import telegram
 b = telegram.bot.Bot("1370331323:AAHe9lBTseBxn5KvA8v2SQbGp8RGbLToa30")
 
 
-
-
-
-
 class ZerodhaLiveTradingService(ZerodhaServiceBase):
 
     def __init__(self, credential):
@@ -28,8 +24,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
                                     product=self.kite.PRODUCT_MIS,
                                     variety=self.kite.VARIETY_REGULAR)
 
-        logging.info("Order placed. ID is: {}".format(order_id))
-        pass
+        logging.info("Buy Order placed. ID is: {}".format(order_id))
 
     def exit(self, type, instrument_token, date, price, strategy):
         logging.info("-Got Exit for {0} at date {1}".format(instrument_token, str(date)))
@@ -43,5 +38,4 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
                                     order_type=self.kite.ORDER_TYPE_MARKET,
                                     product=self.kite.PRODUCT_MIS,
                                     variety=self.kite.VARIETY_REGULAR)
-
-        pass
+        logging.info("Sell Order placed. ID is: {}".format(order_id))

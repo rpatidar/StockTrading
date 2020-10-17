@@ -211,7 +211,7 @@ class TrendlineStrategy(Strategy):
                             trend_info['coefficient'] = trend[1][1]
                             gap_percentage = (100 * (
                                     (tick_data['ohlc']['close'] - (
-                                                (len(h) - 1) * (trend_info['slope']) + trend_info['coefficient'])) /
+                                            (len(h) - 1) * (trend_info['slope']) + trend_info['coefficient'])) /
                                     h[-1]))
                             bug_signal = gap_percentage < 0.4 and gap_percentage > -0.4
 

@@ -42,7 +42,7 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         if not (get_datetime(9, 00) < datetime.datetime.now() < get_datetime(16, 40)):
             return
 
-        #This condition may not be working at-all because of above condition.
+        # This condition may not be working at-all because of above condition.
         if datetime.datetime.now() > get_datetime(16, 40):
             # Add to the Shutdown hook?
             self.tick_file_handler.close()
