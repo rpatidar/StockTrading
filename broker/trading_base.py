@@ -2,6 +2,7 @@ from broker.indan_stock import NSETradingSystem
 
 import logging
 
+
 class TradingService:
     def __init__(self, credential, configuration):
         self.credential = credential
@@ -10,8 +11,7 @@ class TradingService:
         # Find some way to keep the data immutable with the parent callback
         self.callbacks = []
         self.day_closure_callbacks = []
-
-        pass
+        self.shutdown_event = False
 
     def on_tick_update(self, callback_function):
         # if NSETradingSystem.isAfterMarketHours():
@@ -32,3 +32,6 @@ class TradingService:
     def close_day(self, date, instrument_token, backfill=False):
         for callback in self.day_closure_callbacks:
             callback(date, instrument_token, backfill=backfill)
+
+    def shutdown(self):
+        self.shutdown_event = True

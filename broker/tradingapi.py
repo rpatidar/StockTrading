@@ -18,3 +18,6 @@ class TradingAPI(object):
     def run(self):
         self.tradeRunner.init_listening()
         pass
+
+    def shutdown(self):
+        self.tradeRunner.shutdown()

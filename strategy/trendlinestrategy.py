@@ -4,7 +4,8 @@ from strategy.strategy import Strategy
 from db.storage import StorageHandler
 import logging
 
-from broker.indan_stock import THREE_PM, THREE_FIFTEEN_PM
+from broker.indan_stock import get_datetime
+
 
 class TrendlineStrategy(Strategy):
 
@@ -45,7 +46,7 @@ class TrendlineStrategy(Strategy):
         sh = StorageHandler()
         data = self.get_trading_history_for_day(instrument_token, date.date(), False, agg_type=self.agg_time)
         if data is None:
-            logging.info("Received empty trading history data on "+ str(date.date()) + " for " + str(instrument_token))
+            logging.info("Received empty trading history data on " + str(date.date()) + " for " + str(instrument_token))
             return
         close_price = \
             self.get_trading_history_for_day(instrument_token, date.date(), False, agg_type=self.agg_time)[
@@ -73,9 +74,8 @@ class TrendlineStrategy(Strategy):
             h, raw_trading_data = self.get_simplified_trading_history(date, instrument_token)
 
             if open_position_info != None:
-                sell_signal, stop_loss = self.check_for_sell_signal(h, open_position_info, tick_data )
-                three_fifteen= timestamp.replace(hour=15, minute=15, second=0, microsecond=0)
-                if sell_signal or timestamp > three_fifteen:
+                sell_signal, stop_loss = self.check_for_sell_signal(h, open_position_info, tick_data)
+                if sell_signal or timestamp > get_datetime(15, 15):
                     current_time = raw_trading_data[-1]['date']
                     tb.exit("buy", instrument_token, current_time, stop_loss, "Trendline", None)
                     return
@@ -90,13 +90,14 @@ class TrendlineStrategy(Strategy):
             if (len(h) < 5):
                 return
 
-            if timestamp > timestamp.replace(hour=15, minute=0, second=0, microsecond=0):
+            if timestamp > get_datetime(15, 0):
                 return
 
             # This are the info before i forgot
             # 1. This gets called as soon as the last data point is completed.
             # 2. raw_trading_data[-1]['close']  points to the most recent data point.
-            logging.info("Trying out on the following stock:" + str(instrument_token) + " timestamp:" + str(timestamp) + " len:" + str(len(h)) + " price:" + str(h))
+            logging.info("Trying out on the following stock:" + str(instrument_token) + " timestamp:" + str(
+                timestamp) + " len:" + str(len(h)) + " price:" + str(h))
             if instrument_token == 4818433:
                 logging.debug("Raw trading data:" + str(raw_trading_data))
 
@@ -105,14 +106,15 @@ class TrendlineStrategy(Strategy):
             # 1. This gets called as soon as the last data point is completed.
             # 2. raw_trading_data[-1]['close']  points to the most recent data point.
             if open_position_info == None:  # or previous_strategy_execution_info['buy_ps'] == None:
-                bug_signal, trend_info = self.execute_strategy_to_check_buy_signal(h, raw_trading_data, tick_data, timestamp)
+                bug_signal, trend_info = self.execute_strategy_to_check_buy_signal(h, raw_trading_data, tick_data,
+                                                                                   timestamp)
                 if bug_signal:  # and two_pm_for_day > trade_time:
-                    #Very Little bit of approximation  on the points,
+                    # Very Little bit of approximation  on the points,
                     # but a major in case if its across the days
-                    #trade_data = raw_trading_data[-1]
-                    tb.enter("buy", instrument_token, tick_data['ohlc']['date'], tick_data['ohlc']['close'], "Trendline",
+                    # trade_data = raw_trading_data[-1]
+                    tb.enter("buy", instrument_token, tick_data['ohlc']['date'], tick_data['ohlc']['close'],
+                             "Trendline",
                              {"trend_info": trend_info, "buy_ps": len(h) - 1})
-
 
     def get_simplified_trading_history(self, date, instrument_token):
         """
@@ -144,13 +146,15 @@ class TrendlineStrategy(Strategy):
 
         # Not enough evidence of this helping but sounds better
         if not sell_signal:
-            #TODO: Run permutation on what is the best max profit to book.
-            if (((tick_data['ohlc']['close'] - open_position_info['buy_price']) / open_position_info['buy_price']) * 100) > 3:
+            # TODO: Run permutation on what is the best max profit to book.
+            if (((tick_data['ohlc']['close'] - open_position_info['buy_price']) / open_position_info[
+                'buy_price']) * 100) > 3:
                 return True, h[-1]
 
         # Lets not sell if the loss is not high,
         # very critical in avoiding unnecessary losses.
-        if sell_signal and (((tick_data['ohlc']['close'] - open_position_info['buy_price']) / open_position_info['buy_price']) * 100) < 0.5:
+        if sell_signal and (((tick_data['ohlc']['close'] - open_position_info['buy_price']) / open_position_info[
+            'buy_price']) * 100) < 0.5:
             return False, stop_loss
         return sell_signal, stop_loss
 
@@ -206,7 +210,8 @@ class TrendlineStrategy(Strategy):
                             # Intercept(B)
                             trend_info['coefficient'] = trend[1][1]
                             gap_percentage = (100 * (
-                                    (tick_data['ohlc']['close'] - ((len(h) - 1) * (trend_info['slope']) + trend_info['coefficient'])) /
+                                    (tick_data['ohlc']['close'] - (
+                                                (len(h) - 1) * (trend_info['slope']) + trend_info['coefficient'])) /
                                     h[-1]))
                             bug_signal = gap_percentage < 0.4 and gap_percentage > -0.4
 

@@ -71,3 +71,6 @@ class TradingSystem(object):
             # if order_details != None:
             #     break
         pass
+
+    def shutdown(self):
+        self.tradingAPI.shutdown()

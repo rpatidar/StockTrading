@@ -3,22 +3,24 @@ import threading
 import datetime
 import json
 from kiteconnect import KiteTicker
-from broker.indan_stock import NINE_AM, NINE_FIFTEEN_AM, THREE_FORTY_PM, FOUR_PM
+from broker.indan_stock import get_datetime
 from broker.trading_base import TradingService
 
 from broker.zerodha.zeroda_base import ZerodhaServiceBase
-import queue,threading
+import queue, threading
+
 
 class ZerodhaServiceOnline(ZerodhaServiceBase):
     """
         Realtime tick provider data
     """
+
     def __init__(self, credential, configuration):
         super(ZerodhaServiceOnline, self).__init__(credential, configuration)
         self.intresting_stocks = self.configuration['stocks_to_subscribe']
         self.intresting_stocks_full_mode = self.configuration['stocks_in_fullmode']
         self.__setup()
-        #Start warmup exercise in parallel
+        # Start warmup exercise in parallel
         self.warmup_tracker = {}
         threading.Thread(target=self._preload_historical_data).start()
         # initialize the thread to handle the tick data in a seperate
@@ -37,19 +39,21 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
 
     def on_ticks(self, ws, ticks):
         """Outside business range update ticks should be ignored"""
-        if not (NINE_FIFTEEN_AM < datetime.datetime.now() < THREE_FORTY_PM):
+        if not (get_datetime(9, 00) < datetime.datetime.now() < get_datetime(16, 40)):
             return
 
-        if datetime.datetime.now() > THREE_FORTY_PM :
+        #This condition may not be working at-all because of above condition.
+        if datetime.datetime.now() > get_datetime(16, 40):
+            # Add to the Shutdown hook?
             self.tick_file_handler.close()
 
         # Callback to receive ticks.
         self.tick_file_handler.write(str(datetime.datetime.now()) + "\t" + json.dumps(ticks) + "\n")
         logging.debug("Received ticks")
         # Little approximation on time.
-        #t = threading.Thread(target=self._update_tick_data, args=(ticks, datetime.datetime.date.now()))
+        # t = threading.Thread(target=self._update_tick_data, args=(ticks, datetime.datetime.date.now()))
         self.q.put((ticks, datetime.datetime.now()))
-        #self._update_tick_data(ticks, datetime.datetime.now())
+        # self._update_tick_data(ticks, datetime.datetime.now())
 
     def on_connect(self, ws, response):
         # Callback on successful connect.
@@ -90,33 +94,39 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
             if instrument_data == None:
                 continue
             self.execute_strategy_single_stock_historical(instrument_data['instrument_token'], stock,
-                                                   {"from": start_date, "to": datetime.now()}, backfill=True)
+                                                          {"from": start_date, "to": datetime.now()}, backfill=True)
             self.warmup_tracker[instrument_data['instrument_token']] = True
 
         logging.info("Preloading the data Completed")
 
     def queue_based_tick_handler(self):
-        while True:
-            ticks, timestamp  = self.q.get(block=True)
+        while not self.shutdown_event:
+            ticks, timestamp = None, None
+            try:
+                ticks, timestamp = self.q.get(block=True, timeout=1)
+            except queue.Empty:
+                continue
 
-            #Only use stocks whose current data is loaded in memory already
+            # Only use stocks whose current data is loaded in memory already
             filtered_ticks = []
             for t in ticks:
                 if t['instrument_token'] in self.warmup_tracker:
                     filtered_ticks.append(t)
 
-            decorated_ticks = [ { "instrument_token": tick['instrument_token'], "ohlc": { "date": timestamp, "open": tick['last_price'],  "high": tick['last_price'], "low": tick['last_price'], "close": tick['last_price'] } } for tick in filtered_ticks]
+            decorated_ticks = [{"instrument_token": tick['instrument_token'],
+                                "ohlc": {"date": timestamp, "open": tick['last_price'], "high": tick['last_price'],
+                                         "low": tick['last_price'], "close": tick['last_price']}} for tick in
+                               filtered_ticks]
             self._update_tick_data(decorated_ticks, timestamp)
             self.q.task_done()
 
-
     def on_close(self, ws, code, reason):
-        logging.error("Websocket Error Code: " +  str(code))
-        logging.error("Reason: " +  str(reason))
-        #Comment the code for debugging
+        logging.error("Websocket Error Code: " + str(code))
+        logging.error("Reason: " + str(reason))
+        # Comment the code for debugging
         # if NINE_AM < datetime.datetime.now() < FOUR_PM:
         #     logging.info("Stopping the reconnect as outside of bussiness hours")
-        #ws.stop()
+        # ws.stop()
 
         # On connection close stop the main loop
         # Reconnection will not happen after executing `ws.stop()`
@@ -126,12 +136,11 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         # else:
         #     logging.error("not retrying as market is closed")
 
-
     def init_listening(self):
         logging.info("About to Start Zeroda Connect")
         self.kws.connect(threaded=True)
 
     def _background_listener(self):
         # if self.kws.is_connected():
-            # Connect in a asynchronous threads
+        # Connect in a asynchronous threads
         pass

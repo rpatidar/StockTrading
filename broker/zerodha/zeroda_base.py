@@ -7,10 +7,11 @@ tmp_dir = "tmp/"  # if os.name == "nt" else "/tmp/"
 mock_file = tmp_dir + "/mock"
 import logging
 
+
 class ZerodhaServiceBase(TradingService):
     def __init__(self, credential, configuration):
-        self.session_file = tmp_dir + "/session_file"
         super(ZerodhaServiceBase, self).__init__(credential, configuration)
+        self.session_file = tmp_dir + "/session_file"
         self.api_key = credential['api_key']
         self.api_secret = credential['api_secret']
         self.mock = int(open(mock_file, "r").read() if os.path.exists(mock_file) else "0")
@@ -110,7 +111,7 @@ class ZerodhaServiceBase(TradingService):
         trading_data = self._get_trading_data(stock, instrument_token, from_date, to_date)
         previous_date = None
         for trade_data in trading_data:
-            #Destroying the data immutability, should fix in the right way
+            # Destroying the data immutability, should fix in the right way
             trade_data['date'] = trade_data['date'].replace(tzinfo=None)
             # ohlc = copy.deepcopy(ohlcp)
             if previous_date != None and previous_date.date() != trade_data['date'].date():

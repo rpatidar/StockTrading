@@ -23,7 +23,7 @@ class ZerodhaServiceIntraDay(ZerodhaServiceBase):
             if instrument_data == None:
                 continue
             instrument_token = instrument_data['instrument_token']
-            #As of now not doing a multi threaded execution, can be converted into
+            # As of now not doing a multi threaded execution, can be converted into
             # multi threaded execution if required, was seeing similar perforamnce, toggle below two lines to change betwee single and multi threaded
             # trades.append(self.thread_pool_strategy.submit(self.execute_strategy_single_stock_historical, instrument_token, stock, stock_config));
             self.execute_strategy_single_stock_historical(instrument_token, stock, stock_config)

@@ -10,4 +10,4 @@ for e in pl_summery:
 print("Total PL: = {}", (str(total_pl)))
 print("Total trades done=" + str(len(pl_summery)))
 
-print("Max Loss:" + str(max_loss))  
+print("Max Loss:" + str(max_loss))

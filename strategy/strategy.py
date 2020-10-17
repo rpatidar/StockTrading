@@ -43,8 +43,6 @@ class Strategy:
             print("Ignoring the script update=" + str(script) + " on date=" + str(timestamp) + " because of null data")
             return None
 
-
-
     def _update_local_cache(self, tick_data, timestamp, agg_type=1):
         """
             I personally don't like the way this method is written, just thought to build some aggregate by date for easy processing.
