@@ -1,7 +1,9 @@
 class TradingAPI(object):
     def __init__(self, credential, configuration, tradeRunner):
         # self.credential = credential
-        self.tradeRunner = self._get_trading_service(credential, configuration, tradeRunner)
+        self.tradeRunner = self._get_trading_service(
+            credential, configuration, tradeRunner
+        )
 
     def _get_trading_service(self, credential, configuration, tradeRunner):
         return tradeRunner(credential, configuration)

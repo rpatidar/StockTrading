@@ -7,7 +7,6 @@ from utils.objecthelpers import Singleton
 
 
 class TradeBook(metaclass=Singleton):
-
     def __init__(self):
         self.pl = {}
         self.summery_pl = []
@@ -30,7 +29,7 @@ class TradeBook(metaclass=Singleton):
             "buy_price": price,
             "date": date,
             "execution_info": stragegy_context,
-            "strategy": strategy
+            "strategy": strategy,
         }
 
         if self.trading_service:
@@ -43,13 +42,20 @@ class TradeBook(metaclass=Singleton):
         sh = StorageHandler()
         open_position = self.open_positions.get(instrument_token)
         self.history.setdefault(instrument_token, []).append(
-            {"buy": open_position['buy_price'],
-             "sell": price,  # raw_trading_data[len(h) - 1]['close'],
-             "execution_info": open_position["execution_info"]})
+            {
+                "buy": open_position["buy_price"],
+                "sell": price,  # raw_trading_data[len(h) - 1]['close'],
+                "execution_info": open_position["execution_info"],
+            }
+        )
 
         """TODO: Find better way to combine this into one place"""
-        self.update_pl_summery(open_position['buy_price'], instrument_token, price - open_position['buy_price'])
-        self.sell_line(price, price - open_position['buy_price'], date)
+        self.update_pl_summery(
+            open_position["buy_price"],
+            instrument_token,
+            price - open_position["buy_price"],
+        )
+        self.sell_line(price, price - open_position["buy_price"], date)
 
         """Close the open position"""
         self.open_positions[instrument_token] = None
@@ -63,14 +69,20 @@ class TradeBook(metaclass=Singleton):
         pl_record = self.pl.get(instrument_token)
         if pl_record == None:
             pl_record = {"pl": 0, "change": 0}
-        pl_record['pl'] = pl_record['pl'] + pl
+        pl_record["pl"] = pl_record["pl"] + pl
         change = (pl / buy_ps) * 100
-        pl_record['change'] = pl_record['change'] + change
+        pl_record["change"] = pl_record["change"] + change
         self.pl[instrument_token] = pl_record
-        self.summery_pl.append({"instrument_token": instrument_token, "pl-percentage": change})
+        self.summery_pl.append(
+            {"instrument_token": instrument_token, "pl-percentage": change}
+        )
 
     def sell_line(self, price, pl, transaction_date):
-        logging.info(("SEL Time={0}, Price={1:5.2f}, PL={2:5.2f}").format(str(transaction_date), price, pl))
+        logging.info(
+            ("SEL Time={0}, Price={1:5.2f}, PL={2:5.2f}").format(
+                str(transaction_date), price, pl
+            )
+        )
 
     def get_previous_execution_info(self, instrument_token):
         return self.open_positions.get(instrument_token)
@@ -88,6 +100,7 @@ class TradeBook(metaclass=Singleton):
         logging.info("-----------------Trendline Strategy Summary --------------")
         logging.info("Summary:" + str(self.pl))
         import json
+
         logging.info("Debug Info: ------")
         if not os.path.exists("./tmp/summery"):
             os.mkdir("./tmp/summery")

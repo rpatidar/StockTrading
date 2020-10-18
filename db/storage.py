@@ -15,7 +15,6 @@ from utils.objecthelpers import Singleton
 
 
 class StorageHandler(metaclass=Singleton):
-
     def __init__(self):
         self.storage = {}
         self.strategy_context = {}

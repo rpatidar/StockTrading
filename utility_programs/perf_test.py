@@ -4,13 +4,23 @@ file = "../tmp/HINDZINC_364545_2020-08-01---2020-08-31"
 data = pickle.load(open(file, "rb"))
 day_data = []
 for d in data:
-    if data[0]['date'].replace(hour=0, minute=0, second=0, microsecond=0) == data[0]['date'].replace(hour=0, minute=0,
-                                                                                                     second=0,
-                                                                                                     microsecond=0):
+    if data[0]["date"].replace(hour=0, minute=0, second=0, microsecond=0) == data[0][
+        "date"
+    ].replace(hour=0, minute=0, second=0, microsecond=0):
         day_data.append(d)
 
-d = "low,high,open,close" + '\n'.join(
-    [str(dd['low']) + "," + str(dd['high']) + "," + str(dd['open']) + "," + str(dd['close']) for dd in day_data])
+d = "low,high,open,close" + "\n".join(
+    [
+        str(dd["low"])
+        + ","
+        + str(dd["high"])
+        + ","
+        + str(dd["open"])
+        + ","
+        + str(dd["close"])
+        for dd in day_data
+    ]
+)
 # print(d)
 
 import datetime

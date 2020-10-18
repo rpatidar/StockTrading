@@ -18,3 +18,8 @@ Instead of having 'from zerodha.zeroda_intraday_backtester import ZerodhaService
 1. Implement budget allocation
 1. [low]Backup 'h' for live trading and backtester to compare differences.
 1. Report generation weekly, monthly, and so. Stats on daily profit/loss etc.
+
+
+# Code Formatting instructions 
+https://pypi.org/project/black/
+

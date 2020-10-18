@@ -2,7 +2,6 @@ import datetime
 
 
 class NSETradingSystem:
-
     @staticmethod
     def isAfterMarketHours():
         now = datetime.datetime.today()
@@ -26,19 +25,21 @@ def get_datetime(hour, minute):
     return today_date.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
 
-HOLIDAYS = ["21-Feb-2020",
-            "10-Mar-2020",
-            "02-Apr-2020",
-            "06-Apr-2020",
-            "10-Apr-2020",
-            "14-Apr-2020",
-            "01-May-2020",
-            "25-May-2020",
-            "02-Oct-2020",
-            "16-Nov-2020",
-            "30-Nov-2020",
-            "25-Dec-2020"]
-HOLIDAYS = [datetime.datetime.strptime(d, '%d-%b-%Y').date() for d in HOLIDAYS]
+HOLIDAYS = [
+    "21-Feb-2020",
+    "10-Mar-2020",
+    "02-Apr-2020",
+    "06-Apr-2020",
+    "10-Apr-2020",
+    "14-Apr-2020",
+    "01-May-2020",
+    "25-May-2020",
+    "02-Oct-2020",
+    "16-Nov-2020",
+    "30-Nov-2020",
+    "25-Dec-2020",
+]
+HOLIDAYS = [datetime.datetime.strptime(d, "%d-%b-%Y").date() for d in HOLIDAYS]
 
 
 def is_holiday(date):
