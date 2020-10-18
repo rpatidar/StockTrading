@@ -1,10 +1,9 @@
-import numpy as np
-from strategy.strategy import Strategy
-
-from db.storage import StorageHandler
 import logging
 
-from broker.indan_stock import get_datetime
+import numpy as np
+
+from db.storage import StorageHandler
+from strategy.strategy import Strategy
 
 
 class TrendlineStrategy(Strategy):

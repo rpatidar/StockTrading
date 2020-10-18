@@ -1,29 +1,15 @@
-import argparse
-from strategy.trendlinestrategy import TrendlineStrategy
-from broker.zerodha.zerodha_live_trading import ZerodhaServiceOnline
+import datetime
+import logging
+import time
+
+from broker.indan_stock import is_holiday, get_datetime
 from broker.zerodha.zeroda_intraday_backtester import ZerodhaServiceIntraDay
-from db import storage
-from tradingsystem.tradingsystem import TradingSystem
+from broker.zerodha.zerodha_live_trading import ZerodhaServiceOnline
 from db.storage import StorageHandler
 from db.tradebook import TradeBook
+from strategy.trendlinestrategy import TrendlineStrategy
 from trading_options import TradingOptions
-import time
-from broker.indan_stock import is_holiday, get_datetime
-import datetime
-
-"""
-Trading System to Automate the Strategy execution in DB
-1. It can listen to the tick data for a list of stock from the CSV File
-2. It can insert the tick data into DB
-3. It can execute the configured Strategy For specific stock
-4. It can execute a default trading strategy
-
-5. Risk management
-6. Ordering Management - Can Resume the system from where it stopped.
-7. Support the multiple trading platform
-
-"""
-import logging
+from tradingsystem.tradingsystem import TradingSystem
 
 
 def setup_logging():
@@ -38,6 +24,7 @@ def setup_logging():
     logger = logging.getLogger()
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
+
 
 def run():
     options = TradingOptions()
@@ -68,6 +55,8 @@ def run():
         print("Waiting till ", str(get_datetime(16, 00)))
         time.sleep((get_datetime(16, 00) - datetime.datetime.now()).total_seconds())
         tradingSystem.shutdown()
+
+
 # logging.basicConfig(filename='./automatedtrader.log', level=logging.DEBUG,
 #                     format='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 

@@ -1,8 +1,8 @@
-from collections import OrderedDict
 import datetime
-from db.storage import StorageHandler
-
 import threading
+from collections import OrderedDict
+
+from db.storage import StorageHandler
 
 
 class Strategy:

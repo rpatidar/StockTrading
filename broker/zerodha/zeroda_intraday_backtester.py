@@ -1,6 +1,6 @@
-from broker.zerodha.zeroda_base import ZerodhaServiceBase
-
 from concurrent.futures import ThreadPoolExecutor
+
+from broker.zerodha.zeroda_base import ZerodhaServiceBase
 
 
 class ZerodhaServiceIntraDay(ZerodhaServiceBase):

@@ -1,12 +1,8 @@
-import os
 import json
 
 history = json.load(open("./tmp/summery/history.json", "r"))
 import plotly.graph_objects as go
 import plotly as py
-import pandas as pd
-from datetime import datetime
-from datetime import datetime
 import dateutil.parser
 
 import pandas as pd

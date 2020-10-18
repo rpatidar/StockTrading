@@ -1,7 +1,10 @@
-from kiteconnect import KiteConnect
-from broker.trading_base import TradingService
-import os, pickle, webbrowser
 import datetime
+import os
+import pickle
+
+from kiteconnect import KiteConnect
+
+from broker.trading_base import TradingService
 
 tmp_dir = "tmp/"  # if os.name == "nt" else "/tmp/"
 mock_file = tmp_dir + "/mock"

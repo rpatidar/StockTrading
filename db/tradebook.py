@@ -1,8 +1,9 @@
-from utils.objecthelpers import Singleton
-from db.storage import StorageHandler
 import logging
 import os
 import threading
+
+from db.storage import StorageHandler
+from utils.objecthelpers import Singleton
 
 
 class TradeBook(metaclass=Singleton):

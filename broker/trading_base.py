@@ -1,5 +1,3 @@
-from broker.indan_stock import NSETradingSystem
-
 import logging
 
 

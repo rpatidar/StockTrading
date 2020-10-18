@@ -1,13 +1,13 @@
-import logging
-import threading
 import datetime
 import json
-from kiteconnect import KiteTicker
-from broker.indan_stock import get_datetime
-from broker.trading_base import TradingService
+import logging
+import queue
+import threading
 
+from kiteconnect import KiteTicker
+
+from broker.indan_stock import get_datetime
 from broker.zerodha.zeroda_base import ZerodhaServiceBase
-import queue, threading
 
 
 class ZerodhaServiceOnline(ZerodhaServiceBase):

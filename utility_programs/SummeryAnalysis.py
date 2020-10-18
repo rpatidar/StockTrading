@@ -1,4 +1,3 @@
-import os
 import json
 
 pl_summery = json.load(open("./tmp/summery/trendline1.json", "r"))
