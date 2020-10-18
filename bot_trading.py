@@ -19,7 +19,6 @@ def setup_logging():
                                        interval=1,
                                        backupCount=5)
     logFormatter = logging.Formatter('%(asctime)s %(message)s')
-    handler.suffix = "%Y-%m-%d"
     handler.setFormatter(logFormatter)
     logger = logging.getLogger()
     logger.addHandler(handler)
