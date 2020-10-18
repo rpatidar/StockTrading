@@ -16,7 +16,8 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
                                     transaction_type=self.kite.TRANSACTION_TYPE_BUY,
                                     quantity=1,
                                     order_type=self.kite.ORDER_TYPE_MARKET,
-                                    product=self.kite.PRODUCT_NRML)
+                                    product=self.kite.PRODUCT_MIS,
+                                    variety=self.kite.VARIETY_REGULAR)
 
         logging.info("Order placed. ID is: {}".format(order_id))
         pass
@@ -29,5 +30,6 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
                                     transaction_type=self.kite.TRANSACTION_TYPE_SELL,
                                     quantity=1,
                                     order_type=self.kite.ORDER_TYPE_MARKET,
-                                    product=self.kite.PRODUCT_NRML)
+                                    product=self.kite.PRODUCT_MIS,
+                                    variety=self.kite.VARIETY_REGULAR)
         pass

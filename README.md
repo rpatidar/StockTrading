@@ -23,18 +23,7 @@ Instead of having 'from zerodha.zeroda_intraday_backtester import ZerodhaService
 1. Start time and end time conditon updated in /broker/zerodha/zerodha_live_trading.py
 1. /broker/zerodha/zeroda_base.py : filehandler failing due to file path in Windows.
 1. Main thread getting blocked. Need debug.
-1. Main thread no getting closed even after enter. 
-``` (stocktrading) swapnil@swapnil-dt:~/workspace/StockTrading$ python AutomatedTradingSystem.py live -f stocks_100.txt
-Press enter to close this progra...  
-
-^CException ignored in: <module 'threading' from '/home/swapnil/anaconda3/envs/stocktrading/lib/python3.6/threading.py'>
-Traceback (most recent call last):
-  File "/home/swapnil/anaconda3/envs/stocktrading/lib/python3.6/threading.py", line 1294, in _shutdown
-    t.join()
-  File "/home/swapnil/anaconda3/envs/stocktrading/lib/python3.6/threading.py", line 1056, in join
-    self._wait_for_tstate_lock()
-  File "/home/swapnil/anaconda3/envs/stocktrading/lib/python3.6/threading.py", line 1072, in _wait_for_tstate_lock
-    elif lock.acquire(block, timeout):
-KeyboardInterrupt
-```
-1. Telegram Integrate: On buy signal send message.
+1. Need to store order summary and so analysis on gap. Possible DB integration.
+1. Implement budget allocation
+1. [low]Backup 'h' for live trading and backtester to compare differences.
+1. Report generation weekly, monthly, and so. Stats on daily profit/loss etc.
