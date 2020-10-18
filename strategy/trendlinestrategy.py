@@ -1,8 +1,8 @@
 import logging
 
-from strategy.trend_detection.support_and_resistence_trend_detection import detect_trend
 from db.storage import StorageHandler
 from strategy.strategy import Strategy
+from strategy.trend_detection.support_and_resistence_trend_detection import detect_trend
 
 
 class TrendlineStrategy(Strategy):

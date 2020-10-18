@@ -19,12 +19,12 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
         b.send_message(chat_id=-478351687, text="+Got Enter for {0} at date {1}".format(instrument_token, str(date)))
 
         order_id = self.kite.place_order(tradingsymbol=symbol,
-                                    exchange=exchange,
-                                    transaction_type=self.kite.TRANSACTION_TYPE_BUY,
-                                    quantity=1,
-                                    order_type=self.kite.ORDER_TYPE_MARKET,
-                                    product=self.kite.PRODUCT_MIS,
-                                    variety=self.kite.VARIETY_REGULAR)
+                                         exchange=exchange,
+                                         transaction_type=self.kite.TRANSACTION_TYPE_BUY,
+                                         quantity=1,
+                                         order_type=self.kite.ORDER_TYPE_MARKET,
+                                         product=self.kite.PRODUCT_MIS,
+                                         variety=self.kite.VARIETY_REGULAR)
 
         logging.info("Buy Order placed. ID is: {}".format(order_id))
 
@@ -34,10 +34,10 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
 
         symbol, exchange = self._get_symbol_and_exchange(instrument_token)
         order_id = self.kite.place_order(tradingsymbol=symbol,
-                                    exchange=exchange,
-                                    transaction_type=self.kite.TRANSACTION_TYPE_SELL,
-                                    quantity=1,
-                                    order_type=self.kite.ORDER_TYPE_MARKET,
-                                    product=self.kite.PRODUCT_MIS,
-                                    variety=self.kite.VARIETY_REGULAR)
+                                         exchange=exchange,
+                                         transaction_type=self.kite.TRANSACTION_TYPE_SELL,
+                                         quantity=1,
+                                         order_type=self.kite.ORDER_TYPE_MARKET,
+                                         product=self.kite.PRODUCT_MIS,
+                                         variety=self.kite.VARIETY_REGULAR)
         logging.info("Sell Order placed. ID is: {}".format(order_id))

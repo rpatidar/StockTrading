@@ -12,7 +12,6 @@ class Strategy:
         self.stock_trading_days = {}
         pass
 
-
     def _get_create_or_get_day_history(self, script, timestamp, readonly=True, last_aggregate_date=None, aggregate=None,
                                        agg_type=1, last_aggregate_time=None):
         date = timestamp.date()
