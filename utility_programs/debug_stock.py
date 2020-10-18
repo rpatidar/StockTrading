@@ -14,7 +14,7 @@ import pickle
 
 
 def get_instrument():
-    filehandler = open("./tmp/instruments", 'rb')
+    filehandler = open("../tmp/instruments", 'rb')
     instrument = pickle.load(filehandler)
     filehandler.close()
     return instrument

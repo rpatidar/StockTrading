@@ -1,6 +1,6 @@
 import pickle
 
-file = "./tmp/HINDZINC_364545_2020-08-01---2020-08-31"
+file = "../tmp/HINDZINC_364545_2020-08-01---2020-08-31"
 data = pickle.load(open(file, "rb"))
 day_data = []
 for d in data:
