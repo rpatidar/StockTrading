@@ -1,7 +1,7 @@
 import datetime
 import logging
 import time
-
+import os 
 from broker.indan_stock import is_holiday, get_datetime
 from broker.zerodha.zeroda_intraday_backtester import ZerodhaServiceIntraDay
 from broker.zerodha.zerodha_live_trading import ZerodhaServiceOnline
@@ -36,9 +36,9 @@ def run():
         "api_secret": "eiuq7ln5pp8ae6uc6cjulhap3zc3bsdo",
     }
     configuration = None
-    if options.args.mode == "live"
+    if options.args.mode == "live":
         if os.path.exists("tmp/session_file"):
-            os.remoos(".tmp/session_file")
+            os.remove("./tmp/session_file")
 
         if is_holiday(datetime.datetime.now()):
             logging.info(
