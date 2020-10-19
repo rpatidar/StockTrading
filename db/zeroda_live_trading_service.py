@@ -6,6 +6,10 @@ from broker.zerodha.zeroda_base import ZerodhaServiceBase
 
 
 class ZerodhaLiveTradingService(ZerodhaServiceBase):
+    """
+        Helper utitlity to place the live orders in Zerodha
+    """
+
     def __init__(self, credential):
         # Ignore the credentail as its hard coded inside as of now.
         super(ZerodhaLiveTradingService, self).__init__(credential, None)
@@ -13,12 +17,19 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             "resource/zeroda_margin_stocks.csv", index_col="script"
         )
 
+        self.quantity_tracker = {}
+
     def enter(self, type, instrument_token, date, price, strategy):
         symbol, exchange = self._get_symbol_and_exchange(instrument_token)
 
         if not symbol in self.margin_info:
             logging.info("Can't BUY trade with margin for the Stock {}".format(symbol))
             return
+
+        #This logic should be updated by checking the actual amount and the leverage we can have self.margin_info[symbol]['leverage_margin']
+
+        if price > 5000:
+            self.quantity_tracker[symbol] = int(5000 / price) if price < 5000 else 1
 
         logging.info(
             "+Got Enter for {0} at date {1}".format(instrument_token, str(date))
@@ -33,7 +44,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
                 tradingsymbol=symbol,
                 exchange=exchange,
                 transaction_type=self.kite.TRANSACTION_TYPE_BUY,
-                quantity=1,
+                quantity=self.quantity_tracker[symbol],
                 order_type=self.kite.ORDER_TYPE_MARKET,
                 product=self.kite.PRODUCT_MIS,
                 variety=self.kite.VARIETY_REGULAR,
@@ -69,7 +80,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
                 tradingsymbol=symbol,
                 exchange=exchange,
                 transaction_type=self.kite.TRANSACTION_TYPE_SELL,
-                quantity=1,
+                quantity=self.quantity_tracker[symbol],
                 order_type=self.kite.ORDER_TYPE_MARKET,
                 product=self.kite.PRODUCT_MIS,
                 variety=self.kite.VARIETY_REGULAR,
