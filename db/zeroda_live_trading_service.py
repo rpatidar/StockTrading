@@ -7,7 +7,7 @@ from broker.zerodha.zeroda_base import ZerodhaServiceBase
 
 class ZerodhaLiveTradingService(ZerodhaServiceBase):
     """
-        Helper utitlity to place the live orders in Zerodha
+    Helper utitlity to place the live orders in Zerodha
     """
 
     def __init__(self, credential):
@@ -30,8 +30,10 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             logging.info("Can't BUY trade with margin for the Stock {}".format(symbol))
             return
 
-        #This logic should be updated by checking the actual amount and the leverage we can have self.margin_info[symbol]['leverage_margin']
-        self.quantity_tracker[symbol] = int(5000 / price) if price < 5000 and self.ongoing_trades < 5 else 1
+        # This logic should be updated by checking the actual amount and the leverage we can have self.margin_info[symbol]['leverage_margin']
+        self.quantity_tracker[symbol] = (
+            int(5000 / price) if price < 5000 and self.ongoing_trades < 5 else 1
+        )
 
         logging.info(
             "+Got Enter for {0} at date {1}".format(instrument_token, str(date))
