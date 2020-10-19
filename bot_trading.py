@@ -1,7 +1,8 @@
+import sys
 import datetime
 import logging
 import time
-import os 
+import os
 from broker.indan_stock import is_holiday, get_datetime
 from broker.zerodha.zeroda_intraday_backtester import ZerodhaServiceIntraDay
 from broker.zerodha.zerodha_live_trading import ZerodhaServiceOnline
@@ -95,4 +96,10 @@ def run():
 
 # Execute the command
 setup_logging()
-run()
+
+try:
+    run()
+except:
+    e = sys.exc_info()
+    logging.error("Error while executing the bot trading", exc_info=e)
+    print("Error while executing the Bot trading:\n {0}".format((str(e))))

@@ -282,7 +282,7 @@ class TrendlineStrategy(Strategy):
                                 / h[-1]
                             )
                             bug_signal = gap_percentage < 0.4 and gap_percentage > -0.4
-                            logging.info(("H="+ str(h)))
+                            logging.info(("H=" + str(h)))
                             logging.info("BuySignal : " + str(bug_signal))
 
         return bug_signal, trend_info
