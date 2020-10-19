@@ -18,18 +18,20 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
         )
 
         self.quantity_tracker = {}
+        self.ongoing_trades = 0
 
     def enter(self, type, instrument_token, date, price, strategy):
         symbol, exchange = self._get_symbol_and_exchange(instrument_token)
+        if self.ongoing_trades > 10:
+            logging.info("Too many trades, not taking any trades for now")
+            return
 
         if not symbol in self.margin_info:
             logging.info("Can't BUY trade with margin for the Stock {}".format(symbol))
             return
 
         #This logic should be updated by checking the actual amount and the leverage we can have self.margin_info[symbol]['leverage_margin']
-
-        if price > 5000:
-            self.quantity_tracker[symbol] = int(5000 / price) if price < 5000 else 1
+        self.quantity_tracker[symbol] = int(5000 / price) if price < 5000 and self.ongoing_trades < 5 else 1
 
         logging.info(
             "+Got Enter for {0} at date {1}".format(instrument_token, str(date))
@@ -49,6 +51,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
                 product=self.kite.PRODUCT_MIS,
                 variety=self.kite.VARIETY_REGULAR,
             )
+            self.ongoing_trades = self.ongoing_trades + 1
             logging.info("Buy Order placed. ID is: {}".format(order_id))
         except:
             e = sys.exc_info()
