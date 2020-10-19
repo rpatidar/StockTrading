@@ -36,7 +36,10 @@ def run():
         "api_secret": "eiuq7ln5pp8ae6uc6cjulhap3zc3bsdo",
     }
     configuration = None
-    if options.args.mode == "live":
+    if options.args.mode == "live"
+        if os.path.exists("tmp/session_file"):
+            os.remoos(".tmp/session_file")
+
         if is_holiday(datetime.datetime.now()):
             logging.info(
                 "Not Running the Live strategy today as date:{} is holiday".format(
