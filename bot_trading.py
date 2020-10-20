@@ -11,6 +11,8 @@ from db.tradebook import TradeBook
 from strategy.trendlinestrategy import TrendlineStrategy
 from trading_options import TradingOptions
 from tradingsystem.tradingsystem import TradingSystem
+import traceback
+from messenger.tele_messenger import send_message
 
 
 def setup_logging():
@@ -26,8 +28,7 @@ def setup_logging():
     logger.setLevel(logging.DEBUG)
 
 
-def run():
-    options = TradingOptions()
+def run(options):
     sh = StorageHandler()
     tradeRunner = (
         ZerodhaServiceOnline if options.args.mode == "live" else ZerodhaServiceIntraDay
@@ -61,21 +62,25 @@ def run():
     tradingSystem = TradingSystem(
         credentials, configuration, tradeRunner, [TrendlineStrategy()]
     )
-    tradingSystem.run()
+
     # Use tradebook and get summary
     tradeBook = TradeBook()
     if options.args.mode == "live":
-        # from db.shadow_trading_service import ShadowTradingService
-        # tradeBook.register_trading_service(ShadowTradingService())
         from db.zeroda_live_trading_service import ZerodhaLiveTradingService
 
         tradeBook.register_trading_service(ZerodhaLiveTradingService(credentials))
+    else:
+        from db.shadow_trading_service import ShadowTradingService
 
-    tradeBook.summary()
+        tradeBook.register_trading_service(ShadowTradingService(credentials))
+
     if options.args.mode == "live":
         print("Waiting till ", str(get_datetime(16, 00)))
         time.sleep((get_datetime(16, 00) - datetime.datetime.now()).total_seconds())
         tradingSystem.shutdown()
+
+    tradingSystem.run()
+    tradeBook.summary()
 
 
 # logging.basicConfig(filename='./automatedtrader.log', level=logging.DEBUG,
@@ -96,10 +101,17 @@ def run():
 
 # Execute the command
 setup_logging()
-
+options = TradingOptions()
 try:
-    run()
+    run(options)
 except:
+    traceback.print_exc()
     e = sys.exc_info()
     logging.error("Error while executing the bot trading", exc_info=e)
     print("Error while executing the Bot trading:\n {0}".format((str(e))))
+
+    if options.args.mode == "live":
+        send_message(
+            "Live trading program crashed because of some issue, please check\n"
+            + str(e)
+        )

@@ -23,6 +23,7 @@ class ZerodhaServiceBase(TradingService):
         self._login()
         self.tmp_dir = tmp_dir
         self.instrument_file = tmp_dir + "/instruments"
+        self.instruments = None
         self._get_instrumentnts()
 
     def _login(self):
@@ -79,7 +80,7 @@ class ZerodhaServiceBase(TradingService):
                     return instrument_data
         return None
 
-    def _get_symbol_and_exchange(self, instrument_token):
+    def get_symbol_and_exchange(self, instrument_token):
         instruments = self._get_instrumentnts()
         for instrument_data in instruments:
             if str(instrument_data["instrument_token"]) == str(instrument_token):
@@ -87,6 +88,9 @@ class ZerodhaServiceBase(TradingService):
         return None
 
     def _get_instrumentnts(self):
+        if self.instruments:
+            return self.instruments
+
         if os.path.exists(self.instrument_file):
             self.instruments = pickle.load(open(self.instrument_file, "rb"))
 

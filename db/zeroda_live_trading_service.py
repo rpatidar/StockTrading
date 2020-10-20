@@ -21,7 +21,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
         self.ongoing_trades = 0
 
     def enter(self, type, instrument_token, date, price, strategy):
-        symbol, exchange = self._get_symbol_and_exchange(instrument_token)
+        symbol, exchange = self.get_symbol_and_exchange(instrument_token)
         if self.ongoing_trades > 10:
             logging.info("Too many trades, not taking any trades for now")
             return
@@ -67,7 +67,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             )
 
     def exit(self, type, instrument_token, date, price, strategy):
-        symbol, exchange = self._get_symbol_and_exchange(instrument_token)
+        symbol, exchange = self.get_symbol_and_exchange(instrument_token)
 
         if not symbol in self.margin_info:
             logging.info("Can't SEL trade with margin for the Stock {}".format(symbol))

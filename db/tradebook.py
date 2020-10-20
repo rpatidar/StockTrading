@@ -23,9 +23,12 @@ class TradeBook(metaclass=Singleton):
 
     def enter(self, type, instrument_token, date, price, strategy, stragegy_context):
         self.buy_sell_lock.acquire()
+        symbol, exchange = self.trading_service.get_symbol_and_exchange(
+            instrument_token
+        )
 
         logging.info(("BUY Time={0}, Price={1:5.2f}").format(str(date), price))
-        self.open_positions[instrument_token] = {
+        self.open_positions[symbol] = {
             "buy_price": price,
             "date": date,
             "execution_info": stragegy_context,
@@ -38,10 +41,13 @@ class TradeBook(metaclass=Singleton):
         self.buy_sell_lock.release()
 
     def exit(self, type, instrument_token, date, price, strategy, stragegy_context):
+        symbol, exchange = self.trading_service.get_symbol_and_exchange(
+            instrument_token
+        )
         self.buy_sell_lock.acquire()
         sh = StorageHandler()
-        open_position = self.open_positions.get(instrument_token)
-        self.history.setdefault(instrument_token, []).append(
+        open_position = self.open_positions.get(symbol)
+        self.history.setdefault(symbol, []).append(
             {
                 "buy": open_position["buy_price"],
                 "sell": price,  # raw_trading_data[len(h) - 1]['close'],
@@ -52,32 +58,38 @@ class TradeBook(metaclass=Singleton):
         """TODO: Find better way to combine this into one place"""
         self.update_pl_summery(
             open_position["buy_price"],
+            symbol,
             instrument_token,
             price - open_position["buy_price"],
         )
         self.sell_line(price, price - open_position["buy_price"], date)
 
         """Close the open position"""
-        self.open_positions[instrument_token] = None
+        self.open_positions[symbol] = None
 
         if self.trading_service:
             self.trading_service.exit(type, instrument_token, date, price, strategy)
 
         self.buy_sell_lock.release()
 
-    def update_pl_summery(self, buy_ps, instrument_token, pl):
-        pl_record = self.pl.get(instrument_token)
+    def update_pl_summery(self, buy_ps, symbol, instrument_token, pl):
+        pl_record = self.pl.get(symbol)
         if pl_record == None:
             pl_record = {"pl": 0, "change": 0}
         pl_record["pl"] = pl_record["pl"] + pl
         change = (pl / buy_ps) * 100
         pl_record["change"] = pl_record["change"] + change
-        self.pl[instrument_token] = pl_record
+        self.pl[symbol] = pl_record
         self.summery_pl.append(
-            {"instrument_token": instrument_token, "pl-percentage": change}
+            {
+                "instrument_token": instrument_token,
+                "symbol": symbol,
+                "pl-percentage": change,
+            }
         )
 
-    def sell_line(self, price, pl, transaction_date):
+    @staticmethod
+    def sell_line(price, pl, transaction_date):
         logging.info(
             ("SEL Time={0}, Price={1:5.2f}, PL={2:5.2f}").format(
                 str(transaction_date), price, pl
@@ -85,7 +97,10 @@ class TradeBook(metaclass=Singleton):
         )
 
     def get_previous_execution_info(self, instrument_token):
-        return self.open_positions.get(instrument_token)
+        symbol, exchange = self.trading_service.get_symbol_and_exchange(
+            instrument_token
+        )
+        return self.open_positions.get(symbol)
 
     def summary(self):
         sh = StorageHandler()
