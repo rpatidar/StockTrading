@@ -47,20 +47,26 @@ class TradeBook(metaclass=Singleton):
         self.buy_sell_lock.acquire()
         sh = StorageHandler()
         open_position = self.open_positions.get(symbol)
+        enter_date = open_position['date']
+        exit_date = date
         self.history.setdefault(symbol, []).append(
             {
                 "buy": open_position["buy_price"],
                 "sell": price,  # raw_trading_data[len(h) - 1]['close'],
                 "execution_info": open_position["execution_info"],
+                "entry_time" : enter_date,
+                "exit_time": exit_date
             }
         )
 
         """TODO: Find better way to combine this into one place"""
         self.update_pl_summery(
-            open_position["buy_price"],
+            open_position,
             symbol,
             instrument_token,
             price - open_position["buy_price"],
+            enter_date,
+            exit_date
         )
         self.sell_line(price, price - open_position["buy_price"], date)
 
@@ -72,7 +78,8 @@ class TradeBook(metaclass=Singleton):
 
         self.buy_sell_lock.release()
 
-    def update_pl_summery(self, buy_ps, symbol, instrument_token, pl):
+    def update_pl_summery(self, position, symbol, instrument_token, pl, enter_date , exit_date):
+        buy_ps = position['buy_price']
         pl_record = self.pl.get(symbol)
         if pl_record == None:
             pl_record = {"pl": 0, "change": 0}
@@ -85,6 +92,9 @@ class TradeBook(metaclass=Singleton):
                 "instrument_token": instrument_token,
                 "symbol": symbol,
                 "pl-percentage": change,
+                "entry_time": position,
+                "exit_time": exit_date
+
             }
         )
 
