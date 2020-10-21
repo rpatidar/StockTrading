@@ -26,7 +26,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             logging.info("Too many trades, not taking any trades for now")
             return
 
-        if not symbol in self.margin_info:
+        if not symbol in self.margin_info.index:
             logging.info("Can't BUY trade with margin for the Stock {}".format(symbol))
             return
 
@@ -69,7 +69,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
     def exit(self, type, instrument_token, date, price, strategy):
         symbol, exchange = self.get_symbol_and_exchange(instrument_token)
 
-        if not symbol in self.margin_info:
+        if not symbol in self.margin_info.index:
             logging.info("Can't SEL trade with margin for the Stock {}".format(symbol))
             return
 
