@@ -39,6 +39,7 @@ def run(options):
     }
     configuration = None
     if options.args.mode == "live":
+        print("session created: %s" % time.ctime(os.path.getctime("tmp/session_file")))
         if os.path.exists("tmp/session_file"):
             os.remove("./tmp/session_file")
 
@@ -58,10 +59,6 @@ def run(options):
             for s in options.getStocks()
         )
         configuration = {"back_testing_config": {"stocks_config": stock_input}}
-    # run trading system
-    tradingSystem = TradingSystem(
-        credentials, configuration, tradeRunner, [TrendlineStrategy()]
-    )
 
     # Use tradebook and get summary
     tradeBook = TradeBook()
@@ -74,12 +71,18 @@ def run(options):
 
         tradeBook.register_trading_service(ShadowTradingService(credentials))
 
+    # run trading system
+    tradingSystem = TradingSystem(
+        credentials, configuration, tradeRunner, [TrendlineStrategy()]
+    )
+    tradingSystem.run()
     if options.args.mode == "live":
-        print("Waiting till ", str(get_datetime(16, 00)))
-        time.sleep((get_datetime(16, 00) - datetime.datetime.now()).total_seconds())
+        sleep_time = (get_datetime(16, 00) - datetime.datetime.now()).total_seconds()
+        if sleep_time > 0:
+            print("Waiting till ", str(get_datetime(16, 00)))
+            time.sleep(sleep_time)
         tradingSystem.shutdown()
 
-    tradingSystem.run()
     tradeBook.summary()
 
 
