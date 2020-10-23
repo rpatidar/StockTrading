@@ -27,7 +27,7 @@ class TradeBook(metaclass=Singleton):
             instrument_token
         )
 
-        logging.info(("BUY Time={0}, Price={1:5.2f}").format(str(date), price))
+        logging.info(("BUY Time={0}, Stock={1} Price={2:5.2f}").format(str(date), symbol, price))
         self.open_positions[symbol] = {
             "buy_price": price,
             "date": date,
@@ -68,7 +68,7 @@ class TradeBook(metaclass=Singleton):
             enter_date,
             exit_date
         )
-        self.sell_line(price, price - open_position["buy_price"], date)
+        self.sell_line(symbol,price, price - open_position["buy_price"], date)
 
         """Close the open position"""
         self.open_positions[symbol] = None
@@ -99,10 +99,10 @@ class TradeBook(metaclass=Singleton):
         )
 
     @staticmethod
-    def sell_line(price, pl, transaction_date):
+    def sell_line(symbol, price, pl, transaction_date):
         logging.info(
-            ("SEL Time={0}, Price={1:5.2f}, PL={2:5.2f}").format(
-                str(transaction_date), price, pl
+            ("SEL Time={0}, Stock={1} Price={2:5.2f}, PL={3:5.2f}").format(
+                str(transaction_date), symbol, price, pl
             )
         )
 

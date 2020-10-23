@@ -4,7 +4,6 @@ from db.storage import StorageHandler
 from strategy.strategy import Strategy
 from strategy.trend_detection.support_and_resistence_trend_detection import detect_trend
 
-
 class TrendlineStrategy(Strategy):
     def __init__(self):
 
@@ -78,6 +77,7 @@ class TrendlineStrategy(Strategy):
                 sell_signal, stop_loss = self.check_for_sell_signal(
                     h, open_position_info, tick_data
                 )
+                #TODO: Close the position seprately irespective of tick data to avoid last movement closure
                 three_fifteen = timestamp.replace(
                     hour=15, minute=15, second=0, microsecond=0
                 )
@@ -175,6 +175,8 @@ class TrendlineStrategy(Strategy):
     def check_for_sell_signal(self, h, open_position_info, tick_data):
         trend_info = open_position_info["execution_info"]["trend_info"]
         # Detect the stop loss based on the trend line and also keep a margin of .5 percent below trendline.
+        """worst case Stop loss could be any percentage may be more than 
+        0.5 or 1% as its calculated mathamatically and buying could happen above the trend line """
         stop_loss = (len(h)) * (trend_info["slope"]) + trend_info["coefficient"]
         stop_loss = 0.995 * stop_loss
         sell_signal = stop_loss > tick_data["ohlc"]["close"]
@@ -193,6 +195,7 @@ class TrendlineStrategy(Strategy):
 
         # Lets not sell if the loss is not high,
         # very critical in avoiding unnecessary losses.
+        #TODO: validate adding a Stop Loss on maximum loss can be incurred and run backtest for a 1 year
         if (
             sell_signal
             and (

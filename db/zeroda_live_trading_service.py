@@ -44,6 +44,8 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
         )
 
         try:
+            #TODO: Try placing a limit order instead of market order
+            #Backtest with last 1 year of data to see if its profimaking idea.
             order_id = self.kite.place_order(
                 tradingsymbol=symbol,
                 exchange=exchange,
