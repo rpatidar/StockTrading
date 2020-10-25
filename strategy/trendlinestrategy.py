@@ -88,7 +88,7 @@ class TrendlineStrategy(Strategy):
                         "buy",
                         instrument_token,
                         current_time,
-                        tick_data['ohlc']['close'],
+                        tick_data["ohlc"]["close"],
                         "Trendline",
                         None,
                     )
@@ -197,17 +197,11 @@ class TrendlineStrategy(Strategy):
         # Lets not sell if the loss is not high,
         # very critical in avoiding unnecessary losses.
         # TODO: validate adding a Stop Loss on maximum loss can be incurred and run backtest for a 1 year
-        if (
-            sell_signal
-            and (
-                (
-                    (tick_data["ohlc"]["close"] - open_position_info["buy_price"])
-                    / open_position_info["buy_price"]
-                )
-                * 100
-            )
-            < 0.5
-        ):
+        current_pl = (
+            (tick_data["ohlc"]["close"] - open_position_info["buy_price"])
+            / open_position_info["buy_price"]
+        ) * 100
+        if sell_signal and -0.5 < current_pl < 0.5:
             return False, stop_loss
         return sell_signal, stop_loss
 

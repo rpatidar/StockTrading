@@ -2,7 +2,7 @@ import sys
 import datetime
 import logging
 import time
-
+from utility_programs.analyze_summery import generate_summery
 from api.bot_api import api_controller
 from broker.indan_stock import get_datetime
 from broker.zerodha.zeroda_intraday_backtester import ZerodhaServiceIntraDay
@@ -193,6 +193,7 @@ def main():
                 + str(e)
             )
     print("E :" + str(datetime.datetime.now()))
+    generate_summery(summery_file="./tmp/summery/history.json")
 
 
 # Everything begins here
