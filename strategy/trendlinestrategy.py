@@ -88,7 +88,7 @@ class TrendlineStrategy(Strategy):
                         "buy",
                         instrument_token,
                         current_time,
-                        stop_loss,
+                        tick_data['ohlc']['close'],
                         "Trendline",
                         None,
                     )

@@ -83,10 +83,12 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             self.ongoing_trades = self.ongoing_trades + 1
             logging.info("Buy Order placed. ID is: {}".format(order_id))
             self.open_positions[symbol] = {
-                "buy_price": price,
+                "entry_price": price,
                 "date": date,
                 "execution_info": strategycontext,
                 "strategy": strategy,
+                "type": type,
+                "quantity": self.quantity_tracker[symbol],
             }
         except:
             e = sys.exc_info()
@@ -147,11 +149,13 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             exit_date = date
             self.history.setdefault(symbol, []).append(
                 {
-                    "buy": open_position["buy_price"],
-                    "sell": price,  # raw_trading_data[len(h) - 1]['close'],
+                    "entry_price": open_position["entry_price"],
+                    "exit_price": price,  # raw_trading_data[len(h) - 1]['close'],
                     "execution_info": open_position["execution_info"],
                     "entry_time": enter_date,
                     "exit_time": exit_date,
+                    "type": open_position["type"],
+                    "quantity": open_position["quantity"],
                 }
             )
 
