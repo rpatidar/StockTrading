@@ -2,119 +2,199 @@ import sys
 import datetime
 import logging
 import time
-import os
-from broker.indan_stock import is_holiday, get_datetime
+
+from api.bot_api import api_controller
+from broker.indan_stock import get_datetime
 from broker.zerodha.zeroda_intraday_backtester import ZerodhaServiceIntraDay
 from broker.zerodha.zerodha_live_trading import ZerodhaServiceOnline
-from db.storage import StorageHandler
 from db.tradebook import TradeBook
+from bot_logging.setup_logger import setup_logging
 from strategy.trendlinestrategy import TrendlineStrategy
 from trading_options import TradingOptions
 from tradingsystem.tradingsystem import TradingSystem
 import traceback
 from messenger.tele_messenger import send_message
+from db.zeroda_live_trading_service import ZerodhaLiveTradingService
+from broker.zerodha.queue_live_trading import QueueBasedServiceOnline
+import multiprocessing as mp
+from broker.zerodha.login_helper import prerequisite_multiprocess
+import multiprocessing
+
+credentials = {
+    "api_key": "f6jdkd2t30tny1x8",
+    "api_secret": "eiuq7ln5pp8ae6uc6cjulhap3zc3bsdo",
+}
+proxy = "http://127.0.0.1:6060"
 
 
-def setup_logging():
-    from logging.handlers import TimedRotatingFileHandler
-
-    handler = TimedRotatingFileHandler(
-        "./logs/automatedtrader.log", when="h", interval=1, backupCount=5
-    )
-    logFormatter = logging.Formatter("%(asctime)s %(message)s")
-    handler.setFormatter(logFormatter)
-    logger = logging.getLogger()
-    logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
-
-
-def run(options):
-    sh = StorageHandler()
+def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
+    setup_logging(psnumber)
     tradeRunner = (
-        ZerodhaServiceOnline if options.args.mode == "live" else ZerodhaServiceIntraDay
+        QueueBasedServiceOnline
+        if options.args.mode == "live"
+        else ZerodhaServiceIntraDay
     )
-    credentials = {
-        "api_key": "f6jdkd2t30tny1x8",
-        "api_secret": "eiuq7ln5pp8ae6uc6cjulhap3zc3bsdo",
-    }
+
     configuration = None
     if options.args.mode == "live":
-        print("session created: %s" % time.ctime(os.path.getctime("tmp/session_file")))
-        if os.path.exists("tmp/session_file"):
-            os.remove("./tmp/session_file")
-
-        if is_holiday(datetime.datetime.now()):
-            logging.info(
-                "Not Running the Live strategy today as date:{} is holiday".format(
-                    datetime.datetime.now()
-                )
-            )
+        # if is_holiday(datetime.datetime.now()):
+        #     logging.info(
+        #         "Not Running the Live strategy today as date:{} is holiday".format(
+        #             datetime.datetime.now()
+        #         )
+        #     )
         configuration = {
-            "stocks_to_subscribe": options.getStocks(),
+            "stocks_to_subscribe": options.getStocks()[start_index:end_index],
             "stocks_in_fullmode": [],
+            "tickQueue": tickQueue,
+            "completionEvent": completionEvent,
+            "proxy": "http://127.0.0.1:6060",
         }
     else:
         stock_input = dict(
-            (s, {"from": options.args.start, "to": options.args.end})
-            for s in options.getStocks()
+            (
+                s,
+                {
+                    "from": datetime.datetime.strptime(options.args.start, "%Y-%m-%d"),
+                    "to": datetime.datetime.strptime(options.args.end, "%Y-%m-%d"),
+                },
+            )
+            for s in options.getStocks()[start_index:end_index]
         )
-        configuration = {"back_testing_config": {"stocks_config": stock_input}}
 
-    # Use tradebook and get summary
-    tradeBook = TradeBook()
-    if options.args.mode == "live":
-        from db.zeroda_live_trading_service import ZerodhaLiveTradingService
-
-        tradeBook.register_trading_service(ZerodhaLiveTradingService(credentials))
-    else:
-        from db.shadow_trading_service import ShadowTradingService
-
-        tradeBook.register_trading_service(ShadowTradingService(credentials))
-
+        configuration = {
+            "back_testing_config": {"stocks_config": stock_input},
+            "proxy": "http://127.0.0.1:6060",
+        }
     # run trading system
     tradingSystem = TradingSystem(
         credentials, configuration, tradeRunner, [TrendlineStrategy()]
     )
-    tradingSystem.run()
+
+    # Use tradebook and get summary
+    tradeBook = TradeBook()
     if options.args.mode == "live":
-        sleep_time = (get_datetime(16, 00) - datetime.datetime.now()).total_seconds()
-        if sleep_time > 0:
-            print("Waiting till ", str(get_datetime(16, 00)))
-            time.sleep(sleep_time)
-        tradingSystem.shutdown()
-
-    tradeBook.summary()
-
-
-# logging.basicConfig(filename='./automatedtrader.log', level=logging.DEBUG,
-#                     format='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-
-# Uncomment to profile the code
-# import yappi
-# yappi.set_clock_type("cpu") # Use set_clock_type("wall") for wall time
-# yappi.start()
-# play_casino()
-# play_casino()
-# yappi.get_func_stats().print_all()
-# yappi.get_thread_stats().print_all()
-
-# Command line Running argument
-# -l "RELIANCE" -s "2020-09-01" -e "2020-09-30"  live/audit
-
-
-# Execute the command
-setup_logging()
-options = TradingOptions()
-try:
-    run(options)
-except:
-    traceback.print_exc()
-    e = sys.exc_info()
-    logging.error("Error while executing the bot trading", exc_info=e)
-    print("Error while executing the Bot trading:\n {0}".format((str(e))))
-
-    if options.args.mode == "live":
-        send_message(
-            "Live trading program crashed because of some issue, please check\n"
-            + str(e)
+        tradeBook.register_trading_service(
+            ZerodhaLiveTradingService(credentials, {"proxy": proxy})
         )
+    else:
+        # TODO: This will need some modification
+        tradeBook.register_trading_service(
+            ZerodhaLiveTradingService(credentials, {"proxy": proxy})
+        )
+
+    tradingSystem.run()
+
+    if options.args.mode == "live":
+        completionEvent.wait()
+        time.sleep(5)
+
+
+def main():
+
+    options = TradingOptions()
+    clean_credentials = False  # options.args.mode == "live"
+    prerequisite_multiprocess(
+        credentials["api_key"], credentials["api_secret"], clean_credentials
+    )
+
+    completionEvent = mp.Event()
+    nstocks = len(options.getStocks())
+    ncpu = multiprocessing.cpu_count()
+    if ncpu > 1:
+        ncpu = ncpu - 1
+    steps = int(nstocks / ncpu)
+    if steps == 0:
+        steps = nstocks
+    # Server Process to listen to the api calls and server the get put events.
+    server = mp.Process(target=api_controller, args=(completionEvent, credentials))
+    server.start()
+    time.sleep(2)
+    broadcastQ = []
+    try:
+        print("S :" + str(datetime.datetime.now()))
+        ps = []
+
+        for i in range(0, nstocks, steps):
+            q = mp.Queue()
+            broadcastQ.append(q)
+            start_index = i
+            end_index = i + steps
+            process_number = str(i / steps)
+            # Smaller process to server the specific type of trend detection on some CPU
+            p = mp.Process(
+                target=run,
+                args=(
+                    options,
+                    start_index,
+                    end_index,
+                    process_number,
+                    q,
+                    completionEvent,
+                ),
+            )
+            p.start()
+            ps.append(p)
+
+        def publish_to_threads(ticks, timestamp, backfill):
+            for q in broadcastQ:
+                q.put((ticks, timestamp))
+
+        if options.args.mode == "live":
+            tick_data_updater = ZerodhaServiceOnline(
+                credentials,
+                {
+                    "stocks_to_subscribe": options.getStocks(),
+                    "stocks_in_fullmode": [],
+                    "completionEvent": completionEvent,
+                    "warmupDisabled": True,
+                },
+            )
+            tick_data_updater.on_tick_update(publish_to_threads)
+
+        # for p in ps:
+        #     p.join()
+        # # TODO: remove this
+        # server.join()
+
+        # completionEvent.set()
+        if options.args.mode == "live":
+            four_pm = get_datetime(16, 00)
+            while datetime.datetime.now() < four_pm and not completionEvent.is_set():
+                time.sleep(2)
+
+            if completionEvent.is_set():
+                logging.info(
+                    "Shutting down because of external event to close the process"
+                )
+                server.terminate()
+            elif datetime.datetime.now() < four_pm:
+                logging.info("Shutting down as non trading time")
+                completionEvent.set()
+            else:
+                raise Exception("Not possible")
+        else:
+            for p in ps:
+                p.join()
+
+            completionEvent.set()
+            time.sleep(5)
+            server.terminate()
+            server.join()
+    except:
+        traceback.print_exc()
+        e = sys.exc_info()
+        logging.error("Error while executing the bot trading", exc_info=e)
+        print("Error while executing the Bot trading:\n {0}".format((str(e))))
+
+        if options.args.mode == "live":
+            send_message(
+                "Live trading program crashed because of some issue, please check\n"
+                + str(e)
+            )
+    print("E :" + str(datetime.datetime.now()))
+
+
+# Everything begins here
+if __name__ == "__main__":
+    main()

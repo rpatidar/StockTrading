@@ -19,19 +19,27 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         super(ZerodhaServiceOnline, self).__init__(credential, configuration)
         self.intresting_stocks = self.configuration["stocks_to_subscribe"]
         self.intresting_stocks_full_mode = self.configuration["stocks_in_fullmode"]
-        self.__setup()
+        self.tickQueue = self.configuration.get("tickQueue")
+        self.completionEvent = self.configuration.get("completionEvent")
+        self.warmup_disabled = self.configuration.get("warmupDisabled")
+        # TODO: probably this can be moved external ?
+        if not self.tickQueue:
+            self.__setup()
         # Start warmup exercise in parallel
         self.warmup_tracker = {}
-        threading.Thread(target=self._preload_historical_data).start()
+        if self.warmup_disabled == None or not self.warmup_disabled:
+            threading.Thread(target=self._preload_historical_data).start()
         # initialize the thread to handle the tick data in a seperate
-        self.q = queue.Queue()
+        if not self.tickQueue:
+            self.q = self.tickQueue if self.tickQueue else queue.Queue()
+
         self.queue_handler = threading.Thread(
             target=self.queue_based_tick_handler, args=()
         )
         self.queue_handler.start()
-        self.tick_file_handler = open(
-            "./tmp/" + datetime.datetime.now().strftime("%Y-%m-%d") + ".tick", "a+"
-        )
+        # self.tick_file_handler = open(
+        #     "./tmp/" + datetime.datetime.now().strftime("%Y-%m-%d") + ".tick", "a+"
+        # )
 
     def __setup(self):
         self.kws = KiteTicker(self.api_key, self.access_token)
@@ -46,15 +54,15 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         if not (get_datetime(9, 00) < datetime.datetime.now() < get_datetime(16, 40)):
             return
 
-        # This condition may not be working at-all because of above condition.
-        if datetime.datetime.now() > get_datetime(16, 40):
-            # Add to the Shutdown hook?
-            self.tick_file_handler.close()
-
-        # Callback to receive ticks.
-        self.tick_file_handler.write(
-            str(datetime.datetime.now()) + "\t" + json.dumps(ticks) + "\n"
-        )
+        # # This condition may not be working at-all because of above condition.
+        # if datetime.datetime.now() > get_datetime(16, 40):
+        #     # Add to the Shutdown hook?
+        #     self.tick_file_handler.close()
+        #
+        # # Callback to receive ticks.
+        # self.tick_file_handler.write(
+        #     str(datetime.datetime.now()) + "\t" + json.dumps(ticks) + "\n"
+        # )
         logging.debug("Received ticks")
         # Little approximation on time.
         # t = threading.Thread(target=self._update_tick_data, args=(ticks, datetime.datetime.date.now()))
@@ -83,62 +91,70 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         print("Reconnecting: {}".format(attempts_count))
         logging.info("Reconnecting: {}".format(attempts_count))
 
-    def _preload_historical_data(self):
-        """
-        This is not the effective implementation, as of now blindly pre loading 1 week of data in memory.
-        :return:
-        #"""
-        logging.info("Preloading the data for old dates")
-        from datetime import datetime, timedelta
+    # def _preload_historical_data(self):
+    #     """
+    #     This is not the effective implementation, as of now blindly pre loading 1 week of data in memory.
+    #     :return:
+    #     #"""
+    #     logging.info("Preloading the data for old dates")
+    #     from datetime import datetime, timedelta
+    #
+    #     todays_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    #
+    #     start_date = todays_date - timedelta(days=7)
+    #     end_date = todays_date
+    #
+    #     for stock in self.intresting_stocks:
+    #         instrument_data = self._instrument_row(self.get_instruments(), stock)
+    #         if instrument_data == None:
+    #             continue
+    #         self.execute_strategy_single_stock_historical(
+    #             instrument_data["instrument_token"],
+    #             stock,
+    #             {"from": start_date, "to": datetime.now()},
+    #             backfill=True,
+    #         )
+    #         self.warmup_tracker[instrument_data["instrument_token"]] = True
+    #
+    #     logging.info("Preloading the data Completed")
 
-        todays_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    # def queue_based_tick_handler(self):
+    #     while not self.shutdown_event:
+    #         ticks, timestamp = None, None
+    #         try:
+    #             ticks, timestamp = self.q.get(block=True, timeout=1)
+    #         except queue.Empty:
+    #             continue
+    #
+    #         # Only use stocks whose current data is loaded in memory already
+    #         filtered_ticks = []
+    #         if self.warmup_disabled:
+    #             filtered_ticks = ticks
+    #         else:
+    #             for t in ticks:
+    #                 if t["instrument_token"] in self.warmup_tracker:
+    #                     filtered_ticks.append(t)
+    #
+    #         decorated_ticks = [
+    #             {
+    #                 "instrument_token": tick["instrument_token"],
+    #                 "ohlc": self._get_ohlc(timestamp, tick),
+    #             }
+    #             for tick in filtered_ticks
+    #         ]
+    #         self._update_tick_data(decorated_ticks, timestamp)
+    #         self.q.task_done()
 
-        start_date = todays_date - timedelta(days=7)
-        end_date = todays_date
-
-        for stock in self.intresting_stocks:
-            instrument_data = self._instrument_row(self.instruments, stock)
-            if instrument_data == None:
-                continue
-            self.execute_strategy_single_stock_historical(
-                instrument_data["instrument_token"],
-                stock,
-                {"from": start_date, "to": datetime.now()},
-                backfill=True,
-            )
-            self.warmup_tracker[instrument_data["instrument_token"]] = True
-
-        logging.info("Preloading the data Completed")
-
-    def queue_based_tick_handler(self):
-        while not self.shutdown_event:
-            ticks, timestamp = None, None
-            try:
-                ticks, timestamp = self.q.get(block=True, timeout=1)
-            except queue.Empty:
-                continue
-
-            # Only use stocks whose current data is loaded in memory already
-            filtered_ticks = []
-            for t in ticks:
-                if t["instrument_token"] in self.warmup_tracker:
-                    filtered_ticks.append(t)
-
-            decorated_ticks = [
-                {
-                    "instrument_token": tick["instrument_token"],
-                    "ohlc": {
-                        "date": timestamp,
-                        "open": tick["last_price"],
-                        "high": tick["last_price"],
-                        "low": tick["last_price"],
-                        "close": tick["last_price"],
-                    },
-                }
-                for tick in filtered_ticks
-            ]
-            self._update_tick_data(decorated_ticks, timestamp)
-            self.q.task_done()
+    def _get_ohlc(self, timestamp, tick):
+        if tick.get("last_price"):
+            return {
+                "date": timestamp,
+                "open": tick["last_price"],
+                "high": tick["last_price"],
+                "low": tick["last_price"],
+                "close": tick["last_price"],
+            }
+        return tick["ohlc"]
 
     def on_close(self, ws, code, reason):
         logging.error("Websocket Error Code: " + str(code))
@@ -160,7 +176,7 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         logging.info("About to Start Zeroda Connect")
         self.kws.connect(threaded=True)
 
-    def _background_listener(self):
-        # if self.kws.is_connected():
-        # Connect in a asynchronous threads
-        pass
+    def _check_shutdown_event(self):
+        if self.completionEvent:
+            return self.completionEvent.is_set()
+        return self.shutdown_event

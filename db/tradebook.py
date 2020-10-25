@@ -15,19 +15,19 @@ class TradeBook(metaclass=Singleton):
         """
             Single object map manupulation said to be not requiring locking in python            
         """
-        self.buy_sell_lock = threading.Lock()
         self.trading_service = None
 
     def register_trading_service(self, trading_service):
         self.trading_service = trading_service
 
     def enter(self, type, instrument_token, date, price, strategy, stragegy_context):
-        self.buy_sell_lock.acquire()
         symbol, exchange = self.trading_service.get_symbol_and_exchange(
             instrument_token
         )
 
-        logging.info(("BUY Time={0}, Stock={1} Price={2:5.2f}").format(str(date), symbol, price))
+        logging.info(
+            ("BUY Time={0}, Stock={1} Price={2:5.2f}").format(str(date), symbol, price)
+        )
         self.open_positions[symbol] = {
             "buy_price": price,
             "date": date,
@@ -36,26 +36,24 @@ class TradeBook(metaclass=Singleton):
         }
 
         if self.trading_service:
-            self.trading_service.enter(type, instrument_token, date, price, strategy)
-
-        self.buy_sell_lock.release()
+            self.trading_service.enter(
+                type, instrument_token, date, price, strategy, stragegy_context
+            )
 
     def exit(self, type, instrument_token, date, price, strategy, stragegy_context):
         symbol, exchange = self.trading_service.get_symbol_and_exchange(
             instrument_token
         )
-        self.buy_sell_lock.acquire()
-        sh = StorageHandler()
         open_position = self.open_positions.get(symbol)
-        enter_date = open_position['date']
+        enter_date = open_position["date"]
         exit_date = date
         self.history.setdefault(symbol, []).append(
             {
                 "buy": open_position["buy_price"],
                 "sell": price,  # raw_trading_data[len(h) - 1]['close'],
                 "execution_info": open_position["execution_info"],
-                "entry_time" : enter_date,
-                "exit_time": exit_date
+                "entry_time": enter_date,
+                "exit_time": exit_date,
             }
         )
 
@@ -66,20 +64,22 @@ class TradeBook(metaclass=Singleton):
             instrument_token,
             price - open_position["buy_price"],
             enter_date,
-            exit_date
+            exit_date,
         )
-        self.sell_line(symbol,price, price - open_position["buy_price"], date)
+        self.sell_line(symbol, price, price - open_position["buy_price"], date)
 
         """Close the open position"""
         self.open_positions[symbol] = None
 
         if self.trading_service:
-            self.trading_service.exit(type, instrument_token, date, price, strategy)
+            self.trading_service.exit(
+                type, instrument_token, date, price, strategy, stragegy_context
+            )
 
-        self.buy_sell_lock.release()
-
-    def update_pl_summery(self, position, symbol, instrument_token, pl, enter_date , exit_date):
-        buy_ps = position['buy_price']
+    def update_pl_summery(
+        self, position, symbol, instrument_token, pl, enter_date, exit_date
+    ):
+        buy_ps = position["buy_price"]
         pl_record = self.pl.get(symbol)
         if pl_record == None:
             pl_record = {"pl": 0, "change": 0}
@@ -93,8 +93,7 @@ class TradeBook(metaclass=Singleton):
                 "symbol": symbol,
                 "pl-percentage": change,
                 "entry_time": position,
-                "exit_time": exit_date
-
+                "exit_time": exit_date,
             }
         )
 
@@ -127,22 +126,22 @@ class TradeBook(metaclass=Singleton):
         import json
 
         logging.info("Debug Info: ------")
-        if not os.path.exists("./tmp/summery"):
-            os.mkdir("./tmp/summery")
+        # if not os.path.exists("./tmp/summery"):
+        #     os.mkdir("./tmp/summery")
 
-        # file = open("./tmp/summery/trendline0.json", "w")
-        #
-        # file.write(json.dumps(sh.get_st_context(), indent=1, default=str))
+        # # file = open("./tmp/summery/trendline0.json", "w")
+        # #
+        # # file.write(json.dumps(sh.get_st_context(), indent=1, default=str))
+        # # file.close()
+        # file = open("./tmp/summery/trendline1.json", "w")
+        # file.write(json.dumps(self.summery_pl, indent=1, default=str))
         # file.close()
-        file = open("./tmp/summery/trendline1.json", "w")
-        file.write(json.dumps(self.summery_pl, indent=1, default=str))
-        file.close()
-        file = open("./tmp/summery/trendline2.json", "w")
-        file.write(json.dumps(self.pl, indent=1, default=str))
-        file.close()
-        file = open("./tmp/summery/history.json", "w")
-        file.write(json.dumps(self.history, indent=1, default=str))
-        file.close()
+        # file = open("./tmp/summery/trendline2.json", "w")
+        # file.write(json.dumps(self.pl, indent=1, default=str))
+        # file.close()
+        # file = open("./tmp/summery/history.json", "w")
+        # file.write(json.dumps(self.history, indent=1, default=str))
+        # file.close()
         # TODO: for debugging the graphs
         # intresting_instrument_token = 738561
         # instresing_dates = []

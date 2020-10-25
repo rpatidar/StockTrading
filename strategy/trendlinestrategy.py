@@ -4,6 +4,7 @@ from db.storage import StorageHandler
 from strategy.strategy import Strategy
 from strategy.trend_detection.support_and_resistence_trend_detection import detect_trend
 
+
 class TrendlineStrategy(Strategy):
     def __init__(self):
 
@@ -77,7 +78,7 @@ class TrendlineStrategy(Strategy):
                 sell_signal, stop_loss = self.check_for_sell_signal(
                     h, open_position_info, tick_data
                 )
-                #TODO: Close the position seprately irespective of tick data to avoid last movement closure
+                # TODO: Close the position seprately irespective of tick data to avoid last movement closure
                 three_fifteen = timestamp.replace(
                     hour=15, minute=15, second=0, microsecond=0
                 )
@@ -195,7 +196,7 @@ class TrendlineStrategy(Strategy):
 
         # Lets not sell if the loss is not high,
         # very critical in avoiding unnecessary losses.
-        #TODO: validate adding a Stop Loss on maximum loss can be incurred and run backtest for a 1 year
+        # TODO: validate adding a Stop Loss on maximum loss can be incurred and run backtest for a 1 year
         if (
             sell_signal
             and (
@@ -265,7 +266,7 @@ class TrendlineStrategy(Strategy):
                             trend_info["trendpoints"] = [
                                 {
                                     "price": raw_trading_data[i]["low"],
-                                    "date": raw_trading_data[i]["date"],
+                                    "date": raw_trading_data[i]["date"].timestamp(),
                                 }
                                 for i in trend[0]
                             ]

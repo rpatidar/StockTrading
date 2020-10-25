@@ -3,12 +3,18 @@ import os
 import pickle
 
 from kiteconnect import KiteConnect
-
+from broker.zerodha.login_helper import prerequisite_multiprocess
+import queue
 from broker.trading_base import TradingService
+import pytz
 
 tmp_dir = "tmp/"  # if os.name == "nt" else "/tmp/"
 mock_file = tmp_dir + "/mock"
 import logging
+import requests
+import ratelimit
+from backoff import on_exception, expo
+from ratelimit import limits
 
 
 class ZerodhaServiceBase(TradingService):
@@ -17,57 +23,20 @@ class ZerodhaServiceBase(TradingService):
         self.session_file = tmp_dir + "/session_file"
         self.api_key = credential["api_key"]
         self.api_secret = credential["api_secret"]
+
+        self.proxy = None
+        if configuration:
+            self.proxy = configuration.get("proxy")
+
         self.mock = int(
             open(mock_file, "r").read() if os.path.exists(mock_file) else "0"
         )
-        self._login()
+        self.access_token = prerequisite_multiprocess(self.api_key, self.api_secret)
+        self.kite = KiteConnect(self.api_key, access_token=self.access_token)
         self.tmp_dir = tmp_dir
         self.instrument_file = tmp_dir + "/instruments"
         self.instruments = None
-        self._get_instrumentnts()
-
-    def _login(self):
-        if self.mock == 0:
-            kite = KiteConnect(self.api_key, self.api_secret)
-            token = self._load_token()
-            if not token:
-                print(
-                    "Open this link in browser to login",
-                    KiteConnect(self.api_key, self.api_secret).login_url(),
-                )
-                url = input("Enter Your token URL here")
-                tmp_dir + "/session_file"
-                data = kite.generate_session(
-                    url.split("request_token=")[1].split("&action")[0],
-                    api_secret=self.api_secret,
-                )
-                token = data["access_token"]
-                self._save_session(token)
-            kite.set_access_token(token)
-            self.access_token = token
-            self.kite = kite
-
-    def _load_token(self):
-        import json
-
-        if not os.path.exists(self.session_file):
-            return None
-        session_data = json.load(open(self.session_file, "r"))
-        session_data["lastSessionDate"] = eval(session_data["lastSessionDate"])
-        if (
-            session_data["lastSessionDate"] + datetime.timedelta(days=1)
-            > datetime.datetime.now()
-        ):
-            return session_data["token"]
-        return None
-
-    def _save_session(self, token):
-        import json
-
-        session = {"lastSessionDate": repr(datetime.datetime.now()), "token": token}
-        filehandler = open(self.session_file, "w")
-        json.dump(session, filehandler)
-        filehandler.close()
+        self.cached_info = {}
 
     def _instrument_row(self, instruments, stock, exchange=None):
         exchanges = [exchange] if exchange else ["NSE", "BSE"]
@@ -81,16 +50,29 @@ class ZerodhaServiceBase(TradingService):
         return None
 
     def get_symbol_and_exchange(self, instrument_token):
+        token_info = self.cached_info.get(instrument_token)
+        if token_info:
+            return token_info
         instruments = self._get_instrumentnts()
         for instrument_data in instruments:
             if str(instrument_data["instrument_token"]) == str(instrument_token):
+                self.cached_info[instrument_token] = (
+                    instrument_data["tradingsymbol"],
+                    instrument_data["exchange"],
+                )
                 return instrument_data["tradingsymbol"], instrument_data["exchange"]
         return None
 
     def _get_instrumentnts(self):
         if self.instruments:
             return self.instruments
+        if self.proxy:
+            import requests, json
 
+            self.instruments = json.loads(
+                json.dumps(requests.get(self.proxy + "/instruments").json())
+            )
+            return self.instruments
         if os.path.exists(self.instrument_file):
             self.instruments = pickle.load(open(self.instrument_file, "rb"))
 
@@ -101,7 +83,35 @@ class ZerodhaServiceBase(TradingService):
             filehandler.close()
         return self.instruments
 
+    def get_instruments(self):
+        return self._get_instrumentnts()
+
+    def get_trading_data(self, stock_name, instrument_token, from_date, to_date):
+        return self._get_trading_data(stock_name, instrument_token, from_date, to_date)
+
     def _get_trading_data(self, stock_name, instrument_token, from_date, to_date):
+        if self.proxy:
+            r = requests.post(
+                self._url("/historical_data"),
+                json={
+                    "instrument_token": instrument_token,
+                    "from_date": from_date.timestamp(),
+                    "to_date": to_date.timestamp(),
+                    "aggregate_type": "minute",
+                    "continous": False,
+                    "oi": False,
+                },
+            )
+            r.raise_for_status()
+            hist_data = r.json()
+            for d in hist_data:
+                # TODO: Build mechanism to work indpenendent of timezones
+                d["date"] = datetime.datetime.fromtimestamp(d["date"])
+                # d["date"] = (
+                #     datetime.datetime.fromtimestamp(d["date"])
+                #     .replace(tzinfo=pytz.utc)
+                #     .astimezone(tz=pytz.timezone("Asia/Kolkata"))
+                # )
 
         stock_file_name = (
             self.tmp_dir
@@ -117,18 +127,26 @@ class ZerodhaServiceBase(TradingService):
             return pickle.load(open(stock_file_name, "rb"))
 
         else:
-            trading_data = self.kite.historical_data(
-                instrument_token,
-                from_date,
-                to_date,
-                "minute",
-                continuous=False,
-                oi=False,
+            trading_data = self.rate_limited_historical_data_fetch(
+                from_date, instrument_token, to_date
             )
             filehandler = open(stock_file_name, "wb")
             pickle.dump(trading_data, filehandler)
             filehandler.close()
             return trading_data
+
+    @on_exception(expo, ratelimit.RateLimitException, max_tries=8)
+    @limits(calls=3, period=1)
+    def rate_limited_historical_data_fetch(self, from_date, instrument_token, to_date):
+        trading_data = self.kite.historical_data(
+            instrument_token,
+            from_date,
+            to_date,
+            "minute",
+            continuous=False,
+            oi=False,
+        )
+        return trading_data
 
     def execute_strategy_single_stock_historical(
         self, instrument_token, stock, stock_config, backfill=False
@@ -175,3 +193,75 @@ class ZerodhaServiceBase(TradingService):
             )
         if previous_date != None:
             self.close_day(previous_date, instrument_token)
+
+    def _url(self, path):
+        return self.proxy + path
+
+    def _preload_historical_data(self):
+        """
+        This is not the effective implementation, as of now blindly pre loading 1 week of data in memory.
+        :return:
+        #"""
+        try:
+            logging.info("Preloading the data for old dates")
+            from datetime import datetime, timedelta
+
+            todays_date = datetime.now().replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+
+            start_date = todays_date - timedelta(days=7)
+            end_date = todays_date
+            logging.info(
+                "Preloading for following stocks:" + str(self.intresting_stocks)
+            )
+            for stock in self.intresting_stocks:
+                instrument_data = self._instrument_row(self.get_instruments(), stock)
+                if instrument_data == None:
+                    logging.info("Didn't found the stock:" + str(stock))
+                    continue
+                logging.info("Backtesting for:" + str(stock))
+                self.execute_strategy_single_stock_historical(
+                    instrument_data["instrument_token"],
+                    stock,
+                    {"from": start_date, "to": datetime.now()},
+                    backfill=True,
+                )
+                self.warmup_tracker[instrument_data["instrument_token"]] = True
+
+            logging.info("Preloading the data Completed")
+        except:
+            logging.info("Some error happend")
+            import traceback
+
+            traceback.print_exc()
+
+    def queue_based_tick_handler(self):
+        while not self._check_shutdown_event():
+            ticks, timestamp = None, None
+            try:
+                ticks, timestamp = self.q.get(block=True, timeout=1)
+            except queue.Empty:
+                continue
+
+            # Only use stocks whose current data is loaded in memory already
+            filtered_ticks = []
+            for t in ticks:
+                if t["instrument_token"] in self.warmup_tracker:
+                    filtered_ticks.append(t)
+
+            decorated_ticks = [
+                {
+                    "instrument_token": tick["instrument_token"],
+                    "ohlc": {
+                        "date": timestamp,
+                        "open": tick["last_price"],
+                        "high": tick["last_price"],
+                        "low": tick["last_price"],
+                        "close": tick["last_price"],
+                    },
+                }
+                for tick in filtered_ticks
+            ]
+            self._update_tick_data(decorated_ticks, timestamp)
+            self.q.task_done()

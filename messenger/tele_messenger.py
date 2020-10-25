@@ -6,4 +6,6 @@ TELEGRAM_GROUP = -478351687
 
 
 def send_message(msg):
-    b.send_message(chat_id=TELEGRAM_GROUP, text=msg)
+    print(msg)
+    # b.send_message(chat_id=TELEGRAM_GROUP, text=msg)
+    pass

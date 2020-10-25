@@ -8,7 +8,6 @@ from db.storage import StorageHandler
 class Strategy:
     def __init__(self):
 
-        self.lock = threading.Lock()
         self.stock_trading_days = {}
         pass
 
@@ -67,7 +66,7 @@ class Strategy:
         2. Data is pulled from the central Stored cache and current tick data does not impact anything.
         3. If current tick is for 9:26:00 , this will be updating the aggregated for 9:20 to 9:25.
         """
-        self.lock.acquire()
+
         (
             current_minute,
             current_date,
@@ -92,7 +91,6 @@ class Strategy:
                 agg_type=agg_type,
                 last_aggregate_time=last_aggregate_time,
             )
-        self.lock.release()
         pass
 
     def get_previous_aggregate_timestamp(self, timestamp, agg_type=1):
@@ -162,4 +160,4 @@ class Strategy:
         return None
 
     def run(self, tick_data, riskmanagement, timestamp):
-        print("Running the Strategy")
+        pass
