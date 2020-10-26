@@ -1,11 +1,17 @@
 # Move this to a telegram bot class
 import telegram
 
-b = telegram.bot.Bot("1370331323:AAHe9lBTseBxn5KvA8v2SQbGp8RGbLToa30")
+from utils.objecthelpers import Singleton
+
 TELEGRAM_GROUP = -478351687
 
-
-def send_message(msg):
-    print(msg)
-    # b.send_message(chat_id=TELEGRAM_GROUP, text=msg)
-    pass
+class Messenger(metaclass=Singleton):
+    def __init__(self, mode):
+        self.bot = telegram.bot.Bot("1370331323:AAHe9lBTseBxn5KvA8v2SQbGp8RGbLToa30")
+        self.mode = mode
+    
+    def send_message(self, msg):
+        print(msg)
+        if self.mode == "live":
+            self.bot.send_message(chat_id=TELEGRAM_GROUP, text=msg)
+        pass

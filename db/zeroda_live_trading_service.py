@@ -1,7 +1,7 @@
 import logging
 import sys
 import pandas
-from messenger.tele_messenger import send_message
+from messenger.tele_messenger import Messenger
 from broker.zerodha.zeroda_base import ZerodhaServiceBase
 import requests
 import json
@@ -22,11 +22,15 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             "resource/zeroda_margin_stocks.csv", index_col="script"
         )
 
+        self.mode = None
+        if configuration:
+            self.mode = configuration.get("mode")
+        self.messenger = Messenger(self.mode)
         self.quantity_tracker = {}
         self.ongoing_trades = 0
         self.history = {}
         self.open_positions = {}
-        self.mode = self.configuration.get("mode")
+        
 
     def enter(self, type, instrument_token, date, price, strategy, strategycontext):
         # TODO: move this to the actual class
@@ -57,32 +61,33 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             return
 
         # This logic should be updated by checking the actual amount and the leverage we can have self.margin_info[symbol]['leverage_margin']
-        # self.quantity_tracker[symbol] = (
-        #     int(5000 / price) if price < 5000 and self.ongoing_trades < 5 else 1
-        # )
-        self.quantity_tracker[symbol] = 1
+        self.quantity_tracker[symbol] = (
+            int(5000 / price) if price < 5000 and self.ongoing_trades < 5 else 1
+        )
+        # self.quantity_tracker[symbol] = 1
 
         logging.info(
             "+Got Enter for {0} at date {1}".format(instrument_token, str(date))
         )
 
-        send_message(
+        self.messenger.send_message(
             "-Got Enter for {0} at date {2} Price={1}".format(symbol, price, str(date))
         )
 
         try:
             # TODO: Try placing a limit order instead of market order
             # Backtest with last 1 year of data to see if its profimaking idea.
-            # order_id = self.kite.place_order(
-            #     tradingsymbol=symbol,
-            #     exchange=exchange,
-            #     transaction_type=self.kite.TRANSACTION_TYPE_BUY,
-            #     quantity=self.quantity_tracker[symbol],
-            #     order_type=self.kite.ORDER_TYPE_MARKET,
-            #     product=self.kite.PRODUCT_MIS,
-            #     variety=self.kite.VARIETY_REGULAR,
-            # )
             order_id = "RandomIdEnter"
+            if self.mode == "live":
+                order_id = self.kite.place_order(
+                    tradingsymbol=symbol,
+                    exchange=exchange,
+                    transaction_type=self.kite.TRANSACTION_TYPE_BUY,
+                    quantity=self.quantity_tracker[symbol],
+                    order_type=self.kite.ORDER_TYPE_MARKET,
+                    product=self.kite.PRODUCT_MIS,
+                    variety=self.kite.VARIETY_REGULAR,
+                )
             self.ongoing_trades = self.ongoing_trades + 1
             logging.info("entry Order placed. ID is: {}".format(order_id))
             self.open_positions[symbol] = {
@@ -98,8 +103,8 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             logging.info(
                 "Error while placing the entry Order for {0}".format(symbol), exc_info=e
             )
-            send_message(
-                "Error while placing the entry Order for {0}\n with Exception : ".format(
+            self.messenger.send_message(
+                "Error while placing the BUY Order for {0}\n with Exception : ".format(
                     symbol, str(e)
                 )
             )
@@ -132,20 +137,22 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             "-Got Exit for {0} at date {1}".format(instrument_token, str(date))
         )
 
-        send_message(
+        self.messenger.send_message(
             "-Got Exit for {0} at date {2} Price={1}".format(symbol, price, str(date))
         )
         try:
-            # order_id = self.kite.place_order(
-            #     tradingsymbol=symbol,
-            #     exchange=exchange,
-            #     transaction_type=self.kite.TRANSACTION_TYPE_SELL,
-            #     quantity=self.quantity_tracker[symbol],
-            #     order_type=self.kite.ORDER_TYPE_MARKET,
-            #     product=self.kite.PRODUCT_MIS,
-            #     variety=self.kite.VARIETY_REGULAR,
-            # )
             order_id = "RandomIdExit"
+            if self.mode == "live":
+                order_id = self.kite.place_order(
+                    tradingsymbol=symbol,
+                    exchange=exchange,
+                    transaction_type=self.kite.TRANSACTION_TYPE_SELL,
+                    quantity=self.quantity_tracker[symbol],
+                    order_type=self.kite.ORDER_TYPE_MARKET,
+                    product=self.kite.PRODUCT_MIS,
+                    variety=self.kite.VARIETY_REGULAR,
+                )
+
             logging.info("Sell Order placed. ID is: {}".format(order_id))
             open_position = self.open_positions.get(symbol)
             enter_date = open_position["date"]
@@ -168,7 +175,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             logging.info(
                 "Error while placing the SELL Order for {0}".format(symbol), exc_info=e
             )
-            send_message(
+            self.messenger.send_message(
                 "Error while placing the SELL Order for {0}\n with Exception : ".format(
                     symbol, str(e)
                 )

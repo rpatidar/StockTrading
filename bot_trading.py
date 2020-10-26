@@ -13,7 +13,7 @@ from strategy.trendlinestrategy import TrendlineStrategy
 from trading_options import TradingOptions
 from tradingsystem.tradingsystem import TradingSystem
 import traceback
-from messenger.tele_messenger import send_message
+from messenger.tele_messenger import Messenger
 from db.zeroda_live_trading_service import ZerodhaLiveTradingService
 from broker.zerodha.queue_live_trading import QueueBasedServiceOnline
 import multiprocessing as mp
@@ -29,12 +29,12 @@ def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
     setup_logging(psnumber)
     tradeRunner = (
         QueueBasedServiceOnline
-        if options.args.mode == "live"
+        if options.args.mode == "live" or options.args.mode == "audit"
         else ZerodhaServiceIntraDay
     )
 
     configuration = None
-    if options.args.mode == "live":
+    if options.args.mode == "live" or options.args.mode == "audit":
         # if is_holiday(datetime.datetime.now()):
         #     logging.info(
         #         "Not Running the Live strategy today as date:{} is holiday".format(
@@ -71,19 +71,19 @@ def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
 
     # Use tradebook and get summary
     tradeBook = TradeBook()
-    if options.args.mode == "live":
+    if options.args.mode == "live" or options.args.mode == "audit":
         tradeBook.register_trading_service(
-            ZerodhaLiveTradingService(credentials, {"proxy": proxy})
+            ZerodhaLiveTradingService(credentials, {"proxy": proxy, "mode": options.args.mode })
         )
     else:
         # TODO: This will need some modification
         tradeBook.register_trading_service(
-            ZerodhaLiveTradingService(credentials, {"proxy": proxy})
+            ZerodhaLiveTradingService(credentials, {"proxy": proxy, "mode": options.args.mode})
         )
 
     tradingSystem.run()
 
-    if options.args.mode == "live":
+    if options.args.mode == "live" or options.args.mode == "audit":
         completionEvent.wait()
         time.sleep(5)
 
@@ -91,6 +91,7 @@ def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
 def main():
     setup_logging("main")
     options = TradingOptions()
+    messenger = Messenger(options.args.mode)
     clean_credentials = False  # options.args.mode == "live"
     prerequisite_multiprocess(
         credentials["api_key"], credentials["api_secret"], clean_credentials
@@ -138,7 +139,7 @@ def main():
             for q in broadcastQ:
                 q.put((ticks, timestamp))
 
-        if options.args.mode == "live":
+        if options.args.mode == "live" or options.args.mode == "audit":
             tick_data_updater = ZerodhaServiceOnline(
                 credentials,
                 {
@@ -157,7 +158,7 @@ def main():
         # server.join()
 
         # completionEvent.set()
-        if options.args.mode == "live":
+        if options.args.mode == "live" or options.args.mode == "audit":
             four_pm = get_datetime(16, 00)
             while datetime.datetime.now() < four_pm and not completionEvent.is_set():
                 time.sleep(2)
@@ -186,8 +187,8 @@ def main():
         logging.error("Error while executing the bot trading", exc_info=e)
         print("Error while executing the Bot trading:\n {0}".format((str(e))))
 
-        if options.args.mode == "live":
-            send_message(
+        if options.args.mode == "live" or options.args.mode == "audit":
+            messenger.send_message(
                 "Live trading program crashed because of some issue, please check\n"
                 + str(e)
             )

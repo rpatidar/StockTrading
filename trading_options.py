@@ -12,7 +12,7 @@ class TradingOptions:
         self.parser.add_argument(
             "mode",
             type=str,
-            choices=["audit", "live"],
+            choices=["backtest", "audit", "live"],
             help="comma separated list of stock codes",
         )
         # Adding optional arguments

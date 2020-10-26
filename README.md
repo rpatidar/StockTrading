@@ -2,9 +2,9 @@
 
 
 # Execution
-> python3.6 bot_trading.py audit --start 2020-09-01 --end 2020-09-30 -l ENDURANCE  
-> python3.6 bot_trading.py live --start 2020-09-01 --end 2020-09-30 -l ENDURANCE  
-> python3.6 bot_trading.py audit --start 2020-09-01 --end 2020-09-30 -f '../stock.txt'  
+> python3.6 bot_trading.py backtest --start 2020-09-01 --end 2020-09-30 -l ENDURANCE  
+> python3.6 bot_trading.py live -l ENDURANCE  
+> python3.6 bot_trading.py audit -f '../stock.txt'  
 > python bot_trading.py live -f stocks_100.txt
 
 # Debug
