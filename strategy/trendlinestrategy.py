@@ -13,6 +13,8 @@ class TrendlineStrategy(Strategy):
         self.tick_history = {}
         self.numbest = -1
         self.last_run = {}
+        self.trend_following = {}
+        self.flag = None
         """
             Store the data in following format 
             [
@@ -24,13 +26,15 @@ class TrendlineStrategy(Strategy):
         """
         self.market_history = {}
         self.agg_time = 5
+        self.pending_trades = {}
 
         # self.last_closure = {}
 
     def close_day(self, date, instrument_token, backfill=False):
         if backfill:
             return
-
+        self.pending_trades = {}
+        self.trend_following = {}
         self.last_run[instrument_token] = -1
         # TODO: Fix the aggregate for the last minute, as of now the data is loaded for the previous candle, 5 minute aggregate before as
         # Current aggregate might be incomplete.
@@ -74,9 +78,45 @@ class TrendlineStrategy(Strategy):
                 date, instrument_token
             )
 
+            # TODO: this is little bit wrong, low is testing the condition is meet,
+            # the order need to be placed.
+            # Alternative is buy at the trade close price.
+            if (
+                self.pending_trades.get(instrument_token) != None
+                # and self.pending_trades[instrument_token]['activation'] == False
+                and tick_data["ohlc"]["low"]
+                > self.pending_trades[instrument_token]["input_record"][3]
+            ):
+                parms = self.pending_trades[instrument_token]["input_record"]
+                #                self.pending_trades[instrument_token]['activation'] = True
+                # print("Entering the instrument at later stage to test the limit orders ")
+                # tb.enter(*self.pending_trades[instrument_token]["input_record"])
+                tb.enter(
+                    parms[0],
+                    parms[1],
+                    parms[2],
+                    tick_data["ohlc"]["close"],
+                    parms[4],
+                    parms[5],
+                )
+                self.pending_trades[instrument_token] = None
+                return
+
+            # if (
+            #     self.pending_trades.get(instrument_token) != None
+            #     and self.pending_trades[instrument_token]['activation'] == True
+            #     and tick_data["ohlc"]["low"] < self.pending_trades[instrument_token]["input_record"][3]
+            # ):
+            #     self.pending_trades[instrument_token]['activation'] = True
+            #     # print("Entering the instrument at later stage to test the limit orders ")
+            #     tb.enter(*self.pending_trades[instrument_token]["input_record"])
+            #     self.pending_trades[instrument_token] = None
+            #     return
+
             if open_position_info != None:
+
                 sell_signal, stop_loss = self.check_for_sell_signal(
-                    h, open_position_info, tick_data
+                    instrument_token, h, open_position_info, tick_data
                 )
                 # TODO: Close the position seprately irespective of tick data to avoid last movement closure
                 three_fifteen = timestamp.replace(
@@ -84,11 +124,21 @@ class TrendlineStrategy(Strategy):
                 )
                 if sell_signal or timestamp > three_fifteen:
                     current_time = raw_trading_data[-1]["date"]
+                    # StopLoss orders to hit at the buying price level.
+                    sell_price = (
+                        tick_data["ohlc"]["close"]
+                        if timestamp > three_fifteen
+                        else stop_loss
+                    )
+
+                    # if current_pl < -1.5:
+                    #     sell_price = 0.985 * open_position_info['buy_price']
                     tb.exit(
                         "buy",
                         instrument_token,
-                        current_time,
-                        tick_data["ohlc"]["close"],
+                        current_time,  # Should we make it timestamp ?
+                        sell_price,
+                        # tick_data["ohlc"]["close"],
                         "Trendline",
                         None,
                     )
@@ -122,8 +172,8 @@ class TrendlineStrategy(Strategy):
             #     + " price:"
             #     + str(h)
             # )
-            if instrument_token == 4818433:
-                logging.debug("Raw trading data:" + str(raw_trading_data))
+            # if instrument_token == 4818433:
+            #     logging.debug("Raw trading data:" + str(raw_trading_data))
 
             #
             # This are the info before i forgot
@@ -139,14 +189,19 @@ class TrendlineStrategy(Strategy):
                     # Very Little bit of approximation  on the points,
                     # but a major in case if its across the days
                     # trade_data = raw_trading_data[-1]
-                    tb.enter(
-                        "buy",
-                        instrument_token,
-                        tick_data["ohlc"]["date"],
-                        tick_data["ohlc"]["close"],
-                        "Trendline",
-                        {"trend_info": trend_info, "buy_ps": len(h) - 1},
-                    )
+                    # This will overwrite the buy signal
+                    self.flag = instrument_token
+                    self.pending_trades[instrument_token] = {
+                        "input_record": (
+                            "buy",
+                            instrument_token,
+                            tick_data["ohlc"]["date"],
+                            tick_data["ohlc"]["close"] * 1.003,
+                            "Trendline",
+                            {"trend_info": trend_info, "buy_ps": len(h) - 1},
+                        ),
+                        "activation": False,
+                    }
 
     def get_simplified_trading_history(self, date, instrument_token):
         """
@@ -173,26 +228,27 @@ class TrendlineStrategy(Strategy):
         h = current_aggregate
         return h, raw_trading_data
 
-    def check_for_sell_signal(self, h, open_position_info, tick_data):
+    def check_for_sell_signal(self, instrument_token, h, open_position_info, tick_data):
         trend_info = open_position_info["execution_info"]["trend_info"]
         # Detect the stop loss based on the trend line and also keep a margin of .5 percent below trendline.
         """worst case Stop loss could be any percentage may be more than 
         0.5 or 1% as its calculated mathamatically and buying could happen above the trend line """
         stop_loss = (len(h)) * (trend_info["slope"]) + trend_info["coefficient"]
-        stop_loss = 0.995 * stop_loss
+        stop_loss = 0.985 * stop_loss
+        # Change to low to make or change logic based on 1 minute candle
         sell_signal = stop_loss > tick_data["ohlc"]["close"]
 
         # Not enough evidence of this helping but sounds better
-        if not sell_signal:
-            # TODO: Run permutation on what is the best max profit to book.
-            if (
-                (
-                    (tick_data["ohlc"]["close"] - open_position_info["buy_price"])
-                    / open_position_info["buy_price"]
-                )
-                * 100
-            ) > 3:
-                return True, h[-1]
+        # if not sell_signal:
+        #     # TODO: Run permutation on what is the best max profit to book.
+        #     if (
+        #         (
+        #             (tick_data["ohlc"]["close"] - open_position_info["buy_price"])
+        #             / open_position_info["buy_price"]
+        #         )
+        #         * 100
+        #     ) > 3:
+        #         return True, h[-1]
 
         # Lets not sell if the loss is not high,
         # very critical in avoiding unnecessary losses.
@@ -201,8 +257,25 @@ class TrendlineStrategy(Strategy):
             (tick_data["ohlc"]["close"] - open_position_info["buy_price"])
             / open_position_info["buy_price"]
         ) * 100
-        if sell_signal and -0.5 < current_pl < 0.5:
+
+        # Change the Sell Signal to false.
+        if sell_signal and -1.5 < current_pl:
             return False, stop_loss
+
+        if self.trend_following.get(instrument_token):
+            sl = self.trend_following[instrument_token]["stop_loss"]
+            if sl < tick_data["ohlc"]["high"]:
+                self.trend_following[instrument_token] = None
+                return True, sl
+
+        # Worst case condition it was never hit Changed from < to >,
+        if -2 > current_pl:
+            True, tick_data["ohlc"]["close"]  # open_position_info["buy_price"] * 0.980
+        # Current PL changed < to >
+        if -1.5 > current_pl:
+            self.trend_following[instrument_token] = {
+                "stop_loss": open_position_info["buy_price"] * 0.990
+            }
         return sell_signal, stop_loss
 
     def execute_strategy_to_check_buy_signal(

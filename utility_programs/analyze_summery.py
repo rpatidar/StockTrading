@@ -10,16 +10,17 @@ def generate_summery(summery_file="../tmp/summery/history.json"):
     for stock, stock_history in history.items():
         for t in stock_history:
             pl = ((t["exit_price"] - t["entry_price"]) / t["exit_price"]) * 100
+            # pl = -0.5 if pl < -0.5 else pl
             total_pl = pl + total_pl
             trades.append(
                 {
                     "stock": stock,
                     "enter_date": datetime.datetime.fromtimestamp(t["entry_time"]),
                     "exit_date": datetime.datetime.fromtimestamp(t["exit_time"]),
-                    "entry_price": t["entry_price"],
-                    "exit_time": t["exit_price"],
+                    "entry_price": "%.2f" % t["entry_price"],
+                    "exit_time": "%.2f" % t["exit_price"],
                     "type": t["type"],
-                    "profit_loss": pl,
+                    "profit_loss": "%.2f" % pl,
                 }
             )
     import pandas as pd
