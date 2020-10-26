@@ -2,24 +2,24 @@ import datetime
 import logging
 import threading
 from bot_logging.setup_logger import setup_logging
-from flask import request
+from flask import request, render_template
 
 from db.zeroda_live_trading_service import ZerodhaLiveTradingService
 
 
-def api_controller(completionEvent, credentials):
+def api_controller(completionEvent, credentials, mode="live"):
     setup_logging("controller")
     from flask import Flask
     from waitress import serve
     from flask_cors import CORS
 
-    app = Flask(__name__)
+    app = Flask(__name__, template_folder="../templates")
     cors = CORS(app, resources={r"/*": {"origins": "*"}})
     from broker.zerodha.zeroda_base import ZerodhaServiceBase
     import json
 
     base = ZerodhaServiceBase(credentials, None)
-    live_trading = ZerodhaLiveTradingService(credentials, None)
+    live_trading = ZerodhaLiveTradingService(credentials, {"mode": mode})
 
     def summery_dump():
         completionEvent.wait()
@@ -29,10 +29,9 @@ def api_controller(completionEvent, credentials):
     threading.Thread(target=summery_dump).start()
 
     @app.route("/", methods=["GET"])
-    def hello_world():
-        return """
-            TODO: Create the dashboard showing the current performance data 
-        """
+    def home():
+        test = "I am a sample Input on html page"
+        return render_template("index.html", test=test)
 
     @app.route("/instruments", methods=["GET"])
     def get_instruments():

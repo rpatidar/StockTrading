@@ -19,11 +19,9 @@ from broker.zerodha.queue_live_trading import QueueBasedServiceOnline
 import multiprocessing as mp
 from broker.zerodha.login_helper import prerequisite_multiprocess
 import multiprocessing
+from utils.credential_helper import get_zerodha_credentails
 
-credentials = {
-    "api_key": "f6jdkd2t30tny1x8",
-    "api_secret": "eiuq7ln5pp8ae6uc6cjulhap3zc3bsdo",
-}
+credentials = get_zerodha_credentails()
 proxy = "http://127.0.0.1:6060"
 
 

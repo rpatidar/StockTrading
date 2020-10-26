@@ -244,10 +244,10 @@ class ZerodhaServiceBase(TradingService):
                 "high": tick["last_price"],
                 "low": tick["last_price"],
                 "close": tick["last_price"],
-                }
+            }
         else:
-            return tick.get('ohlc')
-        
+            return tick.get("ohlc")
+
     def queue_based_tick_handler(self):
         while not self._check_shutdown_event():
             ticks, timestamp = None, None

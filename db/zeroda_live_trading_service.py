@@ -26,6 +26,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
         self.ongoing_trades = 0
         self.history = {}
         self.open_positions = {}
+        self.mode = self.configuration.get("mode")
 
     def enter(self, type, instrument_token, date, price, strategy, strategycontext):
         # TODO: move this to the actual class
@@ -170,6 +171,12 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
                     symbol, str(e)
                 )
             )
+
+    def get_history(self):
+        if self.mode == None or self.mode == "live":
+            return self.history
+        with open("./tmp/summery/history.json", "r") as o:
+            return json.load(o)
 
     def summery(self):
         if not os.path.exists("./tmp/summery"):
