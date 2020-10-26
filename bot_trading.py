@@ -106,7 +106,7 @@ def main():
     if steps == 0:
         steps = nstocks
     # Server Process to listen to the api calls and server the get put events.
-    server = mp.Process(target=api_controller, args=(completionEvent, credentials))
+    server = mp.Process(target=api_controller, args=(completionEvent, credentials, options.args.mode))
     server.start()
     time.sleep(2)
     broadcastQ = []

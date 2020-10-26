@@ -7,7 +7,7 @@ from flask import request, render_template
 from db.zeroda_live_trading_service import ZerodhaLiveTradingService
 
 
-def api_controller(completionEvent, credentials, mode="live"):
+def api_controller(completionEvent, credentials, mode):
     setup_logging("controller")
     from flask import Flask
     from waitress import serve

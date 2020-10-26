@@ -104,7 +104,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
                 "Error while placing the entry Order for {0}".format(symbol), exc_info=e
             )
             self.messenger.send_message(
-                "Error while placing the BUY Order for {0}\n with Exception : ".format(
+                "Error while placing the BUY Order for {0}\n with Exception : {1}".format(
                     symbol, str(e)
                 )
             )
@@ -176,7 +176,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
                 "Error while placing the SELL Order for {0}".format(symbol), exc_info=e
             )
             self.messenger.send_message(
-                "Error while placing the SELL Order for {0}\n with Exception : ".format(
+                "Error while placing the SELL Order for {0}\n with Exception : {1}".format(
                     symbol, str(e)
                 )
             )
