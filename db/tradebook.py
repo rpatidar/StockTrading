@@ -7,6 +7,8 @@ from utils.objecthelpers import Singleton
 
 
 class TradeBook(metaclass=Singleton):
+    """TODO: Delete this class?"""
+
     def __init__(self):
         self.pl = {}
         self.summery_pl = []
@@ -29,7 +31,7 @@ class TradeBook(metaclass=Singleton):
             ("BUY Time={0}, Stock={1} Price={2:5.2f}").format(str(date), symbol, price)
         )
         self.open_positions[symbol] = {
-            "buy_price": price,
+            "entry_price": price,
             "date": date,
             "execution_info": stragegy_context,
             "strategy": strategy,
@@ -49,24 +51,16 @@ class TradeBook(metaclass=Singleton):
         exit_date = date
         self.history.setdefault(symbol, []).append(
             {
-                "buy": open_position["buy_price"],
-                "sell": price,  # raw_trading_data[len(h) - 1]['close'],
+                "entry_price": open_position["entry_price"],
+                "exit_price": price,  # raw_trading_data[len(h) - 1]['close'],
                 "execution_info": open_position["execution_info"],
                 "entry_time": enter_date,
                 "exit_time": exit_date,
+                "type": "type",
             }
         )
 
-        """TODO: Find better way to combine this into one place"""
-        self.update_pl_summery(
-            open_position,
-            symbol,
-            instrument_token,
-            price - open_position["buy_price"],
-            enter_date,
-            exit_date,
-        )
-        self.sell_line(symbol, price, price - open_position["buy_price"], date)
+        self.exit_line(symbol, price, price - open_position["entry_price"], date)
 
         """Close the open position"""
         self.open_positions[symbol] = None
@@ -76,29 +70,8 @@ class TradeBook(metaclass=Singleton):
                 type, instrument_token, date, price, strategy, stragegy_context
             )
 
-    def update_pl_summery(
-        self, position, symbol, instrument_token, pl, enter_date, exit_date
-    ):
-        buy_ps = position["buy_price"]
-        pl_record = self.pl.get(symbol)
-        if pl_record == None:
-            pl_record = {"pl": 0, "change": 0}
-        pl_record["pl"] = pl_record["pl"] + pl
-        change = (pl / buy_ps) * 100
-        pl_record["change"] = pl_record["change"] + change
-        self.pl[symbol] = pl_record
-        self.summery_pl.append(
-            {
-                "instrument_token": instrument_token,
-                "symbol": symbol,
-                "pl-percentage": change,
-                "entry_time": position,
-                "exit_time": exit_date,
-            }
-        )
-
     @staticmethod
-    def sell_line(symbol, price, pl, transaction_date):
+    def exit_line(symbol, price, pl, transaction_date):
         logging.info(
             ("SEL Time={0}, Stock={1} Price={2:5.2f}, PL={3:5.2f}").format(
                 str(transaction_date), symbol, price, pl
@@ -112,36 +85,17 @@ class TradeBook(metaclass=Singleton):
         return self.open_positions.get(symbol)
 
     def summary(self):
-        sh = StorageHandler()
         """
-            This is dirty summery, formalize is better
-            1) print stats such as Max Loss, Max Gain
-            2) Continous loosing days
-            3) Continous winning days
-            4) DD - 100, -> 50, 150, 140  ~(150-140)/150            
+        This is dirty summery, formalize is better
+        1) print stats such as Max Loss, Max Gain
+        2) Continous loosing days
+        3) Continous winning days
+        4) DD - 100, -> 50, 150, 140  ~(150-140)/150
         """
 
         logging.info("-----------------Trendline Strategy Summary --------------")
-        logging.info("Summary:" + str(self.pl))
-        import json
+        logging.info("Summary:" + str(self.history))
 
-        logging.info("Debug Info: ------")
-        # if not os.path.exists("./tmp/summery"):
-        #     os.mkdir("./tmp/summery")
-
-        # # file = open("./tmp/summery/trendline0.json", "w")
-        # #
-        # # file.write(json.dumps(sh.get_st_context(), indent=1, default=str))
-        # # file.close()
-        # file = open("./tmp/summery/trendline1.json", "w")
-        # file.write(json.dumps(self.summery_pl, indent=1, default=str))
-        # file.close()
-        # file = open("./tmp/summery/trendline2.json", "w")
-        # file.write(json.dumps(self.pl, indent=1, default=str))
-        # file.close()
-        # file = open("./tmp/summery/history.json", "w")
-        # file.write(json.dumps(self.history, indent=1, default=str))
-        # file.close()
         # TODO: for debugging the graphs
         # intresting_instrument_token = 738561
         # instresing_dates = []
@@ -164,6 +118,3 @@ class TradeBook(metaclass=Singleton):
         # plt.subplot(1,1,1)
         # plt.scatter([f'{x:%Y-%m-%d %H:%M}' for x in final_dates], final_data)
         # plt.show()
-
-
-pass

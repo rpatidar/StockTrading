@@ -51,7 +51,9 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
         #     return
 
         if not symbol in self.margin_info.index:
-            logging.info("Can't BUY trade with margin for the Stock {}".format(symbol))
+            logging.info(
+                "Can't entry trade with margin for the Stock {}".format(symbol)
+            )
             return
 
         # This logic should be updated by checking the actual amount and the leverage we can have self.margin_info[symbol]['leverage_margin']
@@ -82,7 +84,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             # )
             order_id = "RandomIdEnter"
             self.ongoing_trades = self.ongoing_trades + 1
-            logging.info("Buy Order placed. ID is: {}".format(order_id))
+            logging.info("entry Order placed. ID is: {}".format(order_id))
             self.open_positions[symbol] = {
                 "entry_price": price,
                 "date": date,
@@ -94,10 +96,10 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
         except:
             e = sys.exc_info()
             logging.info(
-                "Error while placing the BUY Order for {0}".format(symbol), exc_info=e
+                "Error while placing the entry Order for {0}".format(symbol), exc_info=e
             )
             send_message(
-                "Error while placing the BUY Order for {0}\n with Exception : ".format(
+                "Error while placing the entry Order for {0}\n with Exception : ".format(
                     symbol, str(e)
                 )
             )
