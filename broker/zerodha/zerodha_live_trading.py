@@ -63,7 +63,7 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         # self.tick_file_handler.write(
         #     str(datetime.datetime.now()) + "\t" + json.dumps(ticks) + "\n"
         # )
-        logging.debug("Received ticks")
+        logging.info("Received ticks" + str(ticks))
         # Little approximation on time.
         # t = threading.Thread(target=self._update_tick_data, args=(ticks, datetime.datetime.date.now()))
         self.q.put((ticks, datetime.datetime.now()))
@@ -75,7 +75,7 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         # [738561, 5633]
         instrument_ids = []
         for stock in self.intresting_stocks:
-            instrument_data = self._instrument_row(self.instruments, stock)
+            instrument_data = self._instrument_row(self.get_instruments(), stock)
             if instrument_data:
                 instrument_ids.append(instrument_data["instrument_token"])
             else:

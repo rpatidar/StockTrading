@@ -1,7 +1,7 @@
 import datetime
 import os
 import pickle
-
+import multiprocessing as mp
 from kiteconnect import KiteConnect
 from broker.zerodha.login_helper import prerequisite_multiprocess
 import queue
@@ -23,7 +23,7 @@ class ZerodhaServiceBase(TradingService):
         self.session_file = tmp_dir + "/session_file"
         self.api_key = credential["api_key"]
         self.api_secret = credential["api_secret"]
-
+        self.warmup_disabled = False
         self.proxy = None
         if configuration:
             self.proxy = configuration.get("proxy")
@@ -257,10 +257,12 @@ class ZerodhaServiceBase(TradingService):
                 continue
 
             # Only use stocks whose current data is loaded in memory already
-            filtered_ticks = []
-            for t in ticks:
-                if t["instrument_token"] in self.warmup_tracker:
-                    filtered_ticks.append(t)
+            filtered_ticks = ticks
+            if not self.warmup_disabled:
+                filtered_ticks = []
+                for t in ticks:
+                    if t["instrument_token"] in self.warmup_tracker:
+                        filtered_ticks.append(t)
 
             decorated_ticks = [
                 {
@@ -269,5 +271,8 @@ class ZerodhaServiceBase(TradingService):
                 }
                 for tick in filtered_ticks
             ]
+
+            logging.info("Updated ticks data :" + str(decorated_ticks))
             self._update_tick_data(decorated_ticks, timestamp)
-            self.q.task_done()
+            if type(self.q) != mp.queues.Queue:
+                self.q.task_done()

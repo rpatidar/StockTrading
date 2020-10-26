@@ -91,7 +91,7 @@ def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
 
 
 def main():
-
+    setup_logging("main")
     options = TradingOptions()
     clean_credentials = False  # options.args.mode == "live"
     prerequisite_multiprocess(
@@ -151,6 +151,7 @@ def main():
                 },
             )
             tick_data_updater.on_tick_update(publish_to_threads)
+            tick_data_updater.init_listening()
 
         # for p in ps:
         #     p.join()
