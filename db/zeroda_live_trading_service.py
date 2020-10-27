@@ -189,8 +189,8 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
     @staticmethod
     def to_readable_date(d):
         if float == type(d):
-            return str(datetime.datetime.fromtimestamp(d))
-        return str(d)
+            return datetime.datetime.fromtimestamp(d)
+        return d
 
     def get_history(self):
         if self.mode == None or self.mode == "live":
