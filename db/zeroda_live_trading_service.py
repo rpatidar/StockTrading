@@ -8,6 +8,7 @@ import json
 import os
 import threading
 import datetime
+from tabulate import tabulate
 
 
 class ZerodhaLiveTradingService(ZerodhaServiceBase):
@@ -30,15 +31,16 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
         self.ongoing_trades = 0
         self.history = {}
         self.open_positions = {}
-        
 
-    def enter(self, type, instrument_token, date, price, strategy, strategycontext):
+    def enter(
+        self, trade_type, instrument_token, date, price, strategy, strategycontext
+    ):
         # TODO: move this to the actual class
         if self.proxy:
             r = requests.post(
                 self._url("/enter"),
                 json={
-                    "type": type,
+                    "type": trade_type,
                     "instrument_token": instrument_token,
                     "date": date.timestamp(),
                     "price": price,
@@ -66,13 +68,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
         )
         # self.quantity_tracker[symbol] = 1
 
-        logging.info(
-            "+Got Enter for {0} at date {1}".format(instrument_token, str(date))
-        )
-
-        self.messenger.send_message(
-            "-Got Enter for {0} at date {2} Price={1}".format(symbol, price, str(date))
-        )
+        self.log_trade(trade_type, "Entry", date, price, symbol)
 
         try:
             # TODO: Try placing a limit order instead of market order
@@ -109,14 +105,16 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
                 )
             )
 
-    def exit(self, type, instrument_token, date, price, strategy, strategycontext):
+    def exit(
+        self, trade_type, instrument_token, date, price, strategy, strategycontext
+    ):
         import time
 
         if self.proxy:
             r = requests.post(
                 self._url("/exit"),
                 json={
-                    "type": type,
+                    "type": trade_type,
                     "instrument_token": instrument_token,
                     "date": date.timestamp(),
                     "price": price,
@@ -133,13 +131,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             logging.info("Can't SEL trade with margin for the Stock {}".format(symbol))
             return
 
-        logging.info(
-            "-Got Exit for {0} at date {1}".format(instrument_token, str(date))
-        )
-
-        self.messenger.send_message(
-            "-Got Exit for {0} at date {2} Price={1}".format(symbol, price, str(date))
-        )
+        self.log_trade(trade_type, "Exit", date, price, symbol)
         try:
             order_id = "RandomIdExit"
             if self.mode == "live":
@@ -180,6 +172,25 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
                     symbol, str(e)
                 )
             )
+
+    def log_trade(self, trade_type, fnc_type, date, price, symbol):
+        f = [
+            ["Symbol", symbol],
+            ["TradeType", trade_type],
+            ["Function", fnc_type],
+            ["Date", date.strftime("%y-%m-%d")],
+            ["Time", date.strftime("%H-%M-%S")],
+            ["Price", price],
+        ]
+        f = tabulate(f)
+        logging.info(f)
+        self.messenger.send_message(f)
+
+    @staticmethod
+    def to_readable_date(d):
+        if float == type(d):
+            return str(datetime.datetime.fromtimestamp(d))
+        return str(d)
 
     def get_history(self):
         if self.mode == None or self.mode == "live":
