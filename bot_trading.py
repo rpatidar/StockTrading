@@ -143,58 +143,10 @@ def main():
             p.start()
             ps.append(p)
 
-        def publish_to_threads(ticks, timestamp, backfill):
-            if completionEvent.is_set():
-                return
-            for q in broadcastQ:
-                q.put((ticks, timestamp))
-
         if options.args.mode == "live" or options.args.mode == "audit":
-            tick_data_updater = ZerodhaServiceOnline(
-                credentials,
-                {
-                    "stocks_to_subscribe": options.getStocks(),
-                    "stocks_in_fullmode": [],
-                    "completionEvent": completionEvent,
-                    "warmupDisabled": True,
-                    "mode": options.args.mode,
-                },
-            )
-            tick_data_updater.on_tick_update(publish_to_threads)
-            tick_data_updater.init_listening()
-
-        # for p in ps:
-        #     p.join()
-        # # TODO: remove this
-        # server.join()
-
-        # completionEvent.set()
-        if options.args.mode == "live" or options.args.mode == "audit":
-            four_pm = get_datetime(16, 00)
-            while datetime.datetime.now() < four_pm and not completionEvent.is_set():
-                time.sleep(2)
-
-            if completionEvent.is_set():
-                logging.info(
-                    "Shutting down because of external event to close the process"
-                )
-                time.sleep(2)
-                server.terminate()
-            elif datetime.datetime.now() > four_pm:
-                logging.info("Shutting down as non trading time")
-                completionEvent.set()
-                time.sleep(2)
-                server.terminate()
-            else:
-                raise Exception("Not possible")
+            handle_realtime_trades(broadcastQ, completionEvent, options, server)
         else:
-            for p in ps:
-                p.join()
-
-            completionEvent.set()
-            time.sleep(5)
-            server.terminate()
-            server.join()
+            handle_backtest_trades(completionEvent, ps, server)
     except:
         traceback.print_exc()
         e = sys.exc_info()
@@ -208,6 +160,50 @@ def main():
             )
     print("E :" + str(datetime.datetime.now()))
     generate_summery(summery_file="./tmp/summery/history.json")
+
+
+def handle_backtest_trades(completionEvent, ps, server):
+    for p in ps:
+        p.join()
+    completionEvent.set()
+    time.sleep(5)
+    server.terminate()
+    server.join()
+
+
+def handle_realtime_trades(broadcastQ, completionEvent, options, server):
+    def publish_to_threads(ticks, timestamp, backfill):
+        if completionEvent.is_set():
+            return
+        for q in broadcastQ:
+            q.put((ticks, timestamp))
+
+    tick_data_updater = ZerodhaServiceOnline(
+        credentials,
+        {
+            "stocks_to_subscribe": options.getStocks(),
+            "stocks_in_fullmode": [],
+            "completionEvent": completionEvent,
+            "warmupDisabled": True,
+            "mode": options.args.mode,
+        },
+    )
+    tick_data_updater.on_tick_update(publish_to_threads)
+    tick_data_updater.init_listening()
+    four_pm = get_datetime(16, 00)
+    while datetime.datetime.now() < four_pm and not completionEvent.is_set():
+        time.sleep(2)
+    if completionEvent.is_set():
+        logging.info("Shutting down because of external event to close the process")
+        time.sleep(2)
+        server.terminate()
+    elif datetime.datetime.now() > four_pm:
+        logging.info("Shutting down as non trading time")
+        completionEvent.set()
+        time.sleep(2)
+        server.terminate()
+    else:
+        raise Exception("Not possible")
 
 
 # Everything begins here
