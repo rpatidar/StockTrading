@@ -97,7 +97,7 @@ class TrendlineStrategy(Strategy):
                 tb.enter(
                     parms[0],
                     parms[1],
-                    parms[2],
+                    timestamp,
                     tick_data["ohlc"]["close"],
                     parms[4],
                     parms[5],
@@ -259,9 +259,10 @@ class TrendlineStrategy(Strategy):
 
         # Worst case condition it was never hit Changed from < to >,
         if -2 > current_pl:
-            True, tick_data["ohlc"][
-                "close"
-            ]  # open_position_info["entry_price"] * 0.980
+            return (
+                True,
+                tick_data["ohlc"]["close"],
+            )  # open_position_info["entry_price"] * 0.980
         # Current PL changed < to >
         if -1.5 > current_pl:
             self.trend_following[instrument_token] = {

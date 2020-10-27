@@ -22,7 +22,7 @@ import multiprocessing
 from utils.credential_helper import get_zerodha_credentails
 
 credentials = get_zerodha_credentails()
-proxy = "http://127.0.0.1:6060"
+PROXY = "http://127.0.0.1:6060"
 
 
 def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
@@ -46,7 +46,7 @@ def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
             "stocks_in_fullmode": [],
             "tickQueue": tickQueue,
             "completionEvent": completionEvent,
-            "proxy": "http://127.0.0.1:6060",
+            "proxy": PROXY,
         }
     else:
         stock_input = dict(
@@ -62,7 +62,7 @@ def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
 
         configuration = {
             "back_testing_config": {"stocks_config": stock_input},
-            "proxy": "http://127.0.0.1:6060",
+            "proxy": PROXY,
         }
     # run trading system
     tradingSystem = TradingSystem(
@@ -74,14 +74,14 @@ def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
     if options.args.mode == "live" or options.args.mode == "audit":
         tradeBook.register_trading_service(
             ZerodhaLiveTradingService(
-                credentials, {"proxy": proxy, "mode": options.args.mode}
+                credentials, {"proxy": PROXY, "mode": options.args.mode}
             )
         )
     else:
         # TODO: This will need some modification
         tradeBook.register_trading_service(
             ZerodhaLiveTradingService(
-                credentials, {"proxy": proxy, "mode": options.args.mode}
+                credentials, {"proxy": PROXY, "mode": options.args.mode}
             )
         )
 

@@ -68,7 +68,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
         )
         # self.quantity_tracker[symbol] = 1
 
-        self.log_trade(trade_type, "Entry", date, price, symbol)
+        self.log_trade(trade_type, "Entry", self.to_readable_date(date), price, symbol)
 
         try:
             # TODO: Try placing a limit order instead of market order
@@ -91,7 +91,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
                 "date": date,
                 "execution_info": strategycontext,
                 "strategy": strategy,
-                "type": type,
+                "type": trade_type,
                 "quantity": self.quantity_tracker[symbol],
             }
         except:
@@ -131,7 +131,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             logging.info("Can't SEL trade with margin for the Stock {}".format(symbol))
             return
 
-        self.log_trade(trade_type, "Exit", date, price, symbol)
+        self.log_trade(trade_type, "Exit", self.to_readable_date(date), price, symbol)
         try:
             order_id = "RandomIdExit"
             if self.mode == "live":
