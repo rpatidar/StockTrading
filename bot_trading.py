@@ -144,6 +144,8 @@ def main():
             ps.append(p)
 
         def publish_to_threads(ticks, timestamp, backfill):
+            if completionEvent.is_set():
+                return
             for q in broadcastQ:
                 q.put((ticks, timestamp))
 
