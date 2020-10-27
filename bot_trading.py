@@ -173,10 +173,13 @@ def main():
                 logging.info(
                     "Shutting down because of external event to close the process"
                 )
+                time.sleep(2)
                 server.terminate()
-            elif datetime.datetime.now() < four_pm:
+            elif datetime.datetime.now() > four_pm:
                 logging.info("Shutting down as non trading time")
                 completionEvent.set()
+                time.sleep(2)
+                server.terminate()
             else:
                 raise Exception("Not possible")
         else:

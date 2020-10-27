@@ -177,6 +177,6 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         self.kws.connect(threaded=True)
 
     def _check_shutdown_event(self):
-        if self.completionEvent:
+        if self.completionEvent != None:
             return self.completionEvent.is_set()
         return self.shutdown_event
