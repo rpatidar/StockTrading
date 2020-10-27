@@ -104,45 +104,16 @@ def main():
     )
 
     completionEvent = mp.Event()
-    nstocks = len(options.getStocks())
-    ncpu = multiprocessing.cpu_count()
-    if ncpu > 1:
-        ncpu = ncpu - 1
-    steps = int(nstocks / ncpu)
-    if steps == 0:
-        steps = nstocks
+
     # Server Process to listen to the api calls and server the get put events.
     server = mp.Process(
         target=api_controller, args=(completionEvent, credentials, options.args.mode)
     )
     server.start()
     time.sleep(2)
-    broadcastQ = []
     try:
         print("S :" + str(datetime.datetime.now()))
-        ps = []
-
-        for i in range(0, nstocks, steps):
-            q = mp.Queue()
-            broadcastQ.append(q)
-            start_index = i
-            end_index = i + steps
-            process_number = str(i / steps)
-            # Smaller process to server the specific type of trend detection on some CPU
-            p = mp.Process(
-                target=run,
-                args=(
-                    options,
-                    start_index,
-                    end_index,
-                    process_number,
-                    q,
-                    completionEvent,
-                ),
-            )
-            p.start()
-            ps.append(p)
-
+        ps, broadcastQ = trigger_childprocess(completionEvent, options)
         if options.args.mode == "live" or options.args.mode == "audit":
             handle_realtime_trades(broadcastQ, completionEvent, options, server)
         else:
@@ -160,6 +131,39 @@ def main():
             )
     print("E :" + str(datetime.datetime.now()))
     generate_summery(summery_file="./tmp/summery/history.json")
+
+
+def trigger_childprocess(broadcastQ, completionEvent, options):
+    broadcastQ = []
+    ps = []
+    nstocks = len(options.getStocks())
+    ncpu = multiprocessing.cpu_count()
+    if ncpu > 1:
+        ncpu = ncpu - 1
+    steps = int(nstocks / ncpu)
+    if steps == 0:
+        steps = nstocks
+    for i in range(0, nstocks, steps):
+        q = mp.Queue()
+        broadcastQ.append(q)
+        start_index = i
+        end_index = i + steps
+        process_number = str(i / steps)
+        # Smaller process to server the specific type of trend detection on some CPU
+        p = mp.Process(
+            target=run,
+            args=(
+                options,
+                start_index,
+                end_index,
+                process_number,
+                q,
+                completionEvent,
+            ),
+        )
+        p.start()
+        ps.append(p)
+    return ps, broadcastQ
 
 
 def handle_backtest_trades(completionEvent, ps, server):
