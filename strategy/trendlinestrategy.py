@@ -103,7 +103,7 @@ class TrendlineStrategy(Strategy):
                     parms[5],
                 )
                 self.pending_trades[instrument_token] = None
-                return
+                continue
 
             # if (
             #     self.pending_trades.get(instrument_token) != None
@@ -143,22 +143,22 @@ class TrendlineStrategy(Strategy):
                         "Trendline",
                         None,
                     )
-                    return
+                    continue
 
             # If the aggregates are not updated should we run
             if len(h) <= self.last_run.get(instrument_token, 0):
-                return
+                continue
 
             self.last_run[instrument_token] = len(h)
 
             # wait for enfough data points.
             if len(h) < 5:
-                return
+                continue
 
             if timestamp > timestamp.replace(
                 hour=15, minute=0, second=0, microsecond=0
             ):
-                return
+                continue
 
             # This are the info before i forgot
             # 1. This gets called as soon as the last data point is completed.
