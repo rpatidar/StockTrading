@@ -7,6 +7,7 @@ from broker.zerodha.login_helper import prerequisite_multiprocess
 import queue
 from broker.trading_base import TradingService
 import pytz
+from messenger.tele_messenger import Messenger
 
 tmp_dir = "tmp/"  # if os.name == "nt" else "/tmp/"
 mock_file = tmp_dir + "/mock"
@@ -24,10 +25,14 @@ class ZerodhaServiceBase(TradingService):
         self.api_key = credential["api_key"]
         self.api_secret = credential["api_secret"]
         self.warmup_disabled = False
+
         self.proxy = None
+        self.mode = None
+        self.messenger = None
         if configuration:
             self.proxy = configuration.get("proxy")
-
+            self.mode = configuration.get("mode")
+            self.messenger = Messenger(self.mode)
         self.mock = int(
             open(mock_file, "r").read() if os.path.exists(mock_file) else "0"
         )
@@ -249,6 +254,7 @@ class ZerodhaServiceBase(TradingService):
             return tick.get("ohlc")
 
     def queue_based_tick_handler(self):
+        failure_count = 0
         while not self._check_shutdown_event():
             ticks, timestamp = None, None
             try:
@@ -273,6 +279,21 @@ class ZerodhaServiceBase(TradingService):
             ]
 
             logging.info("Updated ticks data :" + str(decorated_ticks))
-            self._update_tick_data(decorated_ticks, timestamp)
+            try:
+                self._update_tick_data(decorated_ticks, timestamp)
+            except:
+                failure_count = failure_count + 1
+                if failure_count > 10:
+                    import traceback, sys
+
+                    traceback.print_exc()
+                    e = sys.exc_info()
+                    logging.error("Error while executing the Queue Trading", exc_info=e)
+                    m = "Error while executing the Bot trading:\n {0}".format((str(e)))
+                    print(m)
+                    if self.messenger:
+                        self.messenger.send_message(m)
+                    raise Exception("Too many failures please check the log")
+
             if type(self.q) != mp.queues.Queue:
                 self.q.task_done()

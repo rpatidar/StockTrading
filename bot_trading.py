@@ -47,6 +47,7 @@ def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
             "tickQueue": tickQueue,
             "completionEvent": completionEvent,
             "proxy": PROXY,
+            "mode": options.args.mode,
         }
     else:
         stock_input = dict(
@@ -63,6 +64,7 @@ def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
         configuration = {
             "back_testing_config": {"stocks_config": stock_input},
             "proxy": PROXY,
+            "mode": options.args.mode,
         }
     # run trading system
     tradingSystem = TradingSystem(
@@ -153,6 +155,7 @@ def main():
                     "stocks_in_fullmode": [],
                     "completionEvent": completionEvent,
                     "warmupDisabled": True,
+                    "mode": options.args.mode,
                 },
             )
             tick_data_updater.on_tick_update(publish_to_threads)
