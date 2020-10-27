@@ -9,7 +9,6 @@ class TradingSystem(object):
         self.tradingAPI.on_tick_update(self.record_in_db)
         self.tradingAPI.on_tick_update(self.strategy_runner)
         self.tradingAPI.on_day_closure(self.day_closure)
-        # self.riskmanagement = RiskManagement()
 
     def run(self):
         self.tradingAPI.run()
@@ -68,9 +67,7 @@ class TradingSystem(object):
 
     def strategy_runner(self, tick_data, timestamp, backfill=False):
         for strategy in self.stratagies:
-            order_details = strategy.run(tick_data, None, timestamp, backfill=backfill)
-            # if order_details != None:
-            #     break
+            order_details = strategy.run(tick_data, timestamp, backfill=backfill)
         pass
 
     def shutdown(self):

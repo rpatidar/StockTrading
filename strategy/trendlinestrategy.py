@@ -64,8 +64,8 @@ class TrendlineStrategy(Strategy):
             pl = close_price - open_position["entry_price"]
             tb.exit("buy", instrument_token, date, close_price, "Trendline", None)
 
-    def run(self, tick_datas, riskmanagement, timestamp, backfill=False):
-        for tick_data in tick_datas:
+    def run(self, ticks, timestamp, backfill=False):
+        for tick_data in ticks:
             instrument_token = tick_data["instrument_token"]
             trading_data = tick_data["ohlc"]
             date = timestamp.date()

@@ -159,5 +159,5 @@ class Strategy:
                 return [res]
         return None
 
-    def run(self, tick_data, riskmanagement, timestamp):
+    def run(self, tick_data, timestamp):
         pass
