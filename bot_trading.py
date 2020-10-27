@@ -133,7 +133,7 @@ def main():
     generate_summery(summery_file="./tmp/summery/history.json")
 
 
-def trigger_childprocess(broadcastQ, completionEvent, options):
+def trigger_childprocess(completionEvent, options):
     broadcastQ = []
     ps = []
     nstocks = len(options.getStocks())
