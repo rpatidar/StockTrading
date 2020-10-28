@@ -6,7 +6,6 @@ from broker.zerodha.zeroda_base import ZerodhaServiceBase
 import requests
 import json
 import os
-import threading
 import datetime
 from tabulate import tabulate
 
@@ -40,7 +39,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             r = requests.post(
                 self._url("/enter"),
                 json={
-                    "type": trade_type,
+                    "trade_type": trade_type,
                     "instrument_token": instrument_token,
                     "date": date.timestamp(),
                     "price": price,
@@ -56,7 +55,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
         #     logging.info("Too many trades, not taking any trades for now")
         #     return
 
-        if not symbol in self.margin_info.index:
+        if symbol not in self.margin_info.index:
             logging.info(
                 "Can't entry trade with margin for the Stock {}".format(symbol)
             )
@@ -91,7 +90,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
                 "date": date,
                 "execution_info": strategycontext,
                 "strategy": strategy,
-                "type": trade_type,
+                "trade_type": trade_type,
                 "quantity": self.quantity_tracker[symbol],
             }
         except:
@@ -108,13 +107,11 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
     def exit(
         self, trade_type, instrument_token, date, price, strategy, strategycontext
     ):
-        import time
-
         if self.proxy:
             r = requests.post(
                 self._url("/exit"),
                 json={
-                    "type": trade_type,
+                    "trade_type": trade_type,
                     "instrument_token": instrument_token,
                     "date": date.timestamp(),
                     "price": price,
@@ -127,7 +124,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
 
         symbol, exchange = self.get_symbol_and_exchange(instrument_token)
 
-        if not symbol in self.margin_info.index:
+        if symbol not in self.margin_info.index:
             logging.info("Can't SEL trade with margin for the Stock {}".format(symbol))
             return
 
@@ -156,7 +153,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
                     "execution_info": open_position["execution_info"],
                     "entry_time": enter_date,
                     "exit_time": exit_date,
-                    "type": open_position["type"],
+                    "trade_type": open_position["trade_type"],
                     "quantity": open_position["quantity"],
                 }
             )
@@ -194,7 +191,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
         return d
 
     def get_history(self):
-        if self.mode == None or self.mode == "live":
+        if self.mode == "live":
             return self.history
         with open("./tmp/summery/history.json", "r") as o:
             return json.load(o)

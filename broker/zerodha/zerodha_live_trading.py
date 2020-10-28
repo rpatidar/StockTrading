@@ -20,7 +20,7 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         self.intresting_stocks = self.configuration["stocks_to_subscribe"]
         self.intresting_stocks_full_mode = self.configuration["stocks_in_fullmode"]
         self.tickQueue = self.configuration.get("tickQueue")
-        self.completionEvent = self.configuration.get("completionEvent")
+        self.completion_event = self.configuration.get("completionEvent")
         self.warmup_disabled = self.configuration.get("warmupDisabled")
         # TODO: probably this can be moved external ?
         if not self.tickQueue:
@@ -63,7 +63,7 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         # self.tick_file_handler.write(
         #     str(datetime.datetime.now()) + "\t" + json.dumps(ticks) + "\n"
         # )
-        logging.info("Received ticks" + str(ticks))
+        # logging.info("Received ticks" + str(ticks))
         # Little approximation on time.
         # t = threading.Thread(target=self._update_tick_data, args=(ticks, datetime.datetime.date.now()))
         self.q.put((ticks, datetime.datetime.now()))
@@ -177,6 +177,6 @@ class ZerodhaServiceOnline(ZerodhaServiceBase):
         self.kws.connect(threaded=True)
 
     def _check_shutdown_event(self):
-        if self.completionEvent != None:
-            return self.completionEvent.is_set()
+        if self.completion_event != None:
+            return self.completion_event.is_set()
         return self.shutdown_event

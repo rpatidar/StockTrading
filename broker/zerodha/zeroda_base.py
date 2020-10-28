@@ -103,7 +103,7 @@ class ZerodhaServiceBase(TradingService):
                     "from_date": from_date.timestamp(),
                     "to_date": to_date.timestamp(),
                     "aggregate_type": "minute",
-                    "continous": False,
+                    "continuous": False,
                     "oi": False,
                 },
             )

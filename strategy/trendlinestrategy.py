@@ -24,7 +24,6 @@ class TrendlineStrategy(Strategy):
                 }
             ]
         """
-        self.market_history = {}
         self.agg_time = 5
         self.pending_trades = {}
 

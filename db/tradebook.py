@@ -1,8 +1,5 @@
 import logging
-import os
-import threading
 
-from db.storage import StorageHandler
 from utils.objecthelpers import Singleton
 
 
@@ -22,13 +19,15 @@ class TradeBook(metaclass=Singleton):
     def register_trading_service(self, trading_service):
         self.trading_service = trading_service
 
-    def enter(self, type, instrument_token, date, price, strategy, stragegy_context):
+    def enter(
+        self, trade_type, instrument_token, date, price, strategy, stragegy_context
+    ):
         symbol, exchange = self.trading_service.get_symbol_and_exchange(
             instrument_token
         )
 
         logging.info(
-            ("BUY Time={0}, Stock={1} Price={2:5.2f}").format(str(date), symbol, price)
+            "BUY Time={0}, Stock={1} Price={2:5.2f}".format(str(date), symbol, price)
         )
         self.open_positions[symbol] = {
             "entry_price": price,
@@ -39,10 +38,12 @@ class TradeBook(metaclass=Singleton):
 
         if self.trading_service:
             self.trading_service.enter(
-                type, instrument_token, date, price, strategy, stragegy_context
+                trade_type, instrument_token, date, price, strategy, stragegy_context
             )
 
-    def exit(self, type, instrument_token, date, price, strategy, stragegy_context):
+    def exit(
+        self, trade_type, instrument_token, date, price, strategy, stragegy_context
+    ):
         symbol, exchange = self.trading_service.get_symbol_and_exchange(
             instrument_token
         )
@@ -56,7 +57,7 @@ class TradeBook(metaclass=Singleton):
                 "execution_info": open_position["execution_info"],
                 "entry_time": enter_date,
                 "exit_time": exit_date,
-                "type": "type",
+                "trade_type": trade_type,
             }
         )
 
@@ -67,13 +68,13 @@ class TradeBook(metaclass=Singleton):
 
         if self.trading_service:
             self.trading_service.exit(
-                type, instrument_token, date, price, strategy, stragegy_context
+                trade_type, instrument_token, date, price, strategy, stragegy_context
             )
 
     @staticmethod
     def exit_line(symbol, price, pl, transaction_date):
         logging.info(
-            ("SEL Time={0}, Stock={1} Price={2:5.2f}, PL={3:5.2f}").format(
+            "SEL Time={0}, Stock={1} Price={2:5.2f}, PL={3:5.2f}".format(
                 str(transaction_date), symbol, price, pl
             )
         )

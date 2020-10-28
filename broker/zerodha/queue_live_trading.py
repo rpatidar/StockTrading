@@ -21,7 +21,7 @@ class QueueBasedServiceOnline(ZerodhaServiceBase):
         self.intresting_stocks_full_mode = self.configuration["stocks_in_fullmode"]
         self.tickQueue = self.configuration["tickQueue"]
         self.q = self.tickQueue
-        self.completionEvent = self.configuration["completionEvent"]
+        self.completion_event = self.configuration["completionEvent"]
         # Start warmup exercise in parallel
         self.warmup_tracker = {}
         self.warmup_thread = threading.Thread(
@@ -35,7 +35,7 @@ class QueueBasedServiceOnline(ZerodhaServiceBase):
         self.queue_handler.start()
 
     def _check_shutdown_event(self):
-        return self.completionEvent.is_set()
+        return self.completion_event.is_set()
 
     def init_listening(self):
         pass

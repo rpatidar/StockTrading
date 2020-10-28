@@ -25,9 +25,9 @@ credentials = get_zerodha_credentails()
 PROXY = "http://127.0.0.1:6060"
 
 
-def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
+def run(options, start_index, end_index, psnumber, tickQueue, completion_event):
     setup_logging("strategyrunner_" + str(psnumber))
-    tradeRunner = (
+    trade_runner = (
         QueueBasedServiceOnline
         if options.args.mode == "live" or options.args.mode == "audit"
         else ZerodhaServiceIntraDay
@@ -45,7 +45,7 @@ def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
             "stocks_to_subscribe": options.getStocks()[start_index:end_index],
             "stocks_in_fullmode": [],
             "tickQueue": tickQueue,
-            "completionEvent": completionEvent,
+            "completionEvent": completion_event,
             "proxy": PROXY,
             "mode": options.args.mode,
         }
@@ -68,7 +68,7 @@ def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
         }
     # run trading system
     tradingSystem = TradingSystem(
-        credentials, configuration, tradeRunner, [TrendlineStrategy()]
+        credentials, configuration, trade_runner, [TrendlineStrategy()]
     )
 
     # Use tradebook and get summary
@@ -90,7 +90,7 @@ def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
     tradingSystem.run()
 
     if options.args.mode == "live" or options.args.mode == "audit":
-        completionEvent.wait()
+        completion_event.wait()
         time.sleep(5)
 
 
@@ -103,21 +103,21 @@ def main():
         credentials["api_key"], credentials["api_secret"], clean_credentials
     )
 
-    completionEvent = mp.Event()
+    completion_event = mp.Event()
 
     # Server Process to listen to the api calls and server the get put events.
     server = mp.Process(
-        target=api_controller, args=(completionEvent, credentials, options.args.mode)
+        target=api_controller, args=(completion_event, credentials, options.args.mode)
     )
     server.start()
     time.sleep(2)
     try:
         print("S :" + str(datetime.datetime.now()))
-        ps, broadcastQ = trigger_childprocess(completionEvent, options)
+        ps, broadcastQ = trigger_childprocess(completion_event, options)
         if options.args.mode == "live" or options.args.mode == "audit":
-            handle_realtime_trades(broadcastQ, completionEvent, options, server)
+            handle_realtime_trades(broadcastQ, completion_event, options, server)
         else:
-            handle_backtest_trades(completionEvent, ps, server)
+            handle_backtest_trades(completion_event, ps, server)
     except:
         traceback.print_exc()
         e = sys.exc_info()
@@ -133,7 +133,7 @@ def main():
     generate_summery(summery_file="./tmp/summery/history.json")
 
 
-def trigger_childprocess(completionEvent, options):
+def trigger_childprocess(completion_event, options):
     broadcastQ = []
     ps = []
     nstocks = len(options.getStocks())
@@ -158,7 +158,7 @@ def trigger_childprocess(completionEvent, options):
                 end_index,
                 process_number,
                 q,
-                completionEvent,
+                completion_event,
             ),
         )
         p.start()
@@ -166,18 +166,18 @@ def trigger_childprocess(completionEvent, options):
     return ps, broadcastQ
 
 
-def handle_backtest_trades(completionEvent, ps, server):
+def handle_backtest_trades(completion_event, ps, server):
     for p in ps:
         p.join()
-    completionEvent.set()
+    completion_event.set()
     time.sleep(5)
     server.terminate()
     server.join()
 
 
-def handle_realtime_trades(broadcastQ, completionEvent, options, server):
+def handle_realtime_trades(broadcastQ, completion_event, options, server):
     def publish_to_threads(ticks, timestamp, backfill):
-        if completionEvent.is_set():
+        if completion_event.is_set():
             return
         for q in broadcastQ:
             q.put((ticks, timestamp))
@@ -187,7 +187,7 @@ def handle_realtime_trades(broadcastQ, completionEvent, options, server):
         {
             "stocks_to_subscribe": options.getStocks(),
             "stocks_in_fullmode": [],
-            "completionEvent": completionEvent,
+            "completionEvent": completion_event,
             "warmupDisabled": True,
             "mode": options.args.mode,
         },
@@ -195,15 +195,15 @@ def handle_realtime_trades(broadcastQ, completionEvent, options, server):
     tick_data_updater.on_tick_update(publish_to_threads)
     tick_data_updater.init_listening()
     four_pm = get_datetime(16, 00)
-    while datetime.datetime.now() < four_pm and not completionEvent.is_set():
+    while datetime.datetime.now() < four_pm and not completion_event.is_set():
         time.sleep(2)
-    if completionEvent.is_set():
+    if completion_event.is_set():
         logging.info("Shutting down because of external event to close the process")
         time.sleep(2)
         server.terminate()
     elif datetime.datetime.now() > four_pm:
         logging.info("Shutting down as non trading time")
-        completionEvent.set()
+        completion_event.set()
         time.sleep(2)
         server.terminate()
     else:

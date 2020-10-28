@@ -19,7 +19,7 @@ def generate_summery(summery_file="../tmp/summery/history.json"):
                     "exit_date": datetime.datetime.fromtimestamp(t["exit_time"]),
                     "entry_price": "%.2f" % t["entry_price"],
                     "exit_time": "%.2f" % t["exit_price"],
-                    "type": t["type"],
+                    "trade_type": t["trade_type"],
                     "profit_loss": float("%.2f" % pl),
                 }
             )

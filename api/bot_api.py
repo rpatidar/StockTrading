@@ -7,14 +7,14 @@ from flask import request, render_template
 from db.zeroda_live_trading_service import ZerodhaLiveTradingService
 
 
-def api_controller(completionEvent, credentials, mode):
+def api_controller(completion_event, credentials, mode):
     setup_logging("apihandler")
     from flask import Flask
     from waitress import serve
     from flask_cors import CORS
 
     app = Flask(__name__, template_folder="../templates")
-    cors = CORS(app, resources={r"/*": {"origins": "*"}})
+    CORS(app, resources={r"/*": {"origins": "*"}})
     from broker.zerodha.zeroda_base import ZerodhaServiceBase
     import json
 
@@ -22,7 +22,7 @@ def api_controller(completionEvent, credentials, mode):
     live_trading = ZerodhaLiveTradingService(credentials, {"mode": mode})
 
     def summery_dump():
-        completionEvent.wait()
+        completion_event.wait()
         live_trading.summery()
         logging.info("Completed the summery generation")
 
@@ -46,13 +46,11 @@ def api_controller(completionEvent, credentials, mode):
             )
         return json.dumps(inst)
 
-    pass
-
     @app.route("/enter", methods=["POST"])
-    def enter():
+    def enter_trade():
         args = request.json
-        type, instrument_token, date, price, strategy, strategycontext = (
-            args.get("type"),
+        trade_type, instrument_token, date, price, strategy, strategycontext = (
+            args.get("trade_type"),
             args.get("instrument_token"),
             args.get("date"),
             args.get("price"),
@@ -60,17 +58,17 @@ def api_controller(completionEvent, credentials, mode):
             args.get("strategycontext"),
         )
         live_trading.enter(
-            type, instrument_token, date, price, strategy, strategycontext
+            trade_type, instrument_token, date, price, strategy, strategycontext
         )
         return "{}"
 
     pass
 
     @app.route("/exit", methods=["POST"])
-    def exit():
+    def exit_trade():
         args = request.json
-        type, instrument_token, date, price, strategy, strategycontext = (
-            args.get("type"),
+        trade_type, instrument_token, date, price, strategy, strategycontext = (
+            args.get("trade_type"),
             args.get("instrument_token"),
             args.get("date"),
             args.get("price"),
@@ -78,7 +76,7 @@ def api_controller(completionEvent, credentials, mode):
             args.get("strategycontext"),
         )
         live_trading.exit(
-            type, instrument_token, date, price, strategy, strategycontext
+            trade_type, instrument_token, date, price, strategy, strategycontext
         )
         return "{}"
 
@@ -87,12 +85,12 @@ def api_controller(completionEvent, credentials, mode):
     @app.route("/historical_data", methods=["POST", "GET"])
     def historical_data():
         args = request.json
-        instrument_token, from_date, to_date, aggregate_type, continous, oi = (
+        instrument_token, from_date, to_date, aggregate_type, continuous, oi = (
             args.get("instrument_token"),
             args.get("from_date"),
             args.get("to_date"),
             args.get("aggregate_type"),
-            args.get("continous"),
+            args.get("continuous"),
             args.get("oi"),
         )
 
@@ -109,7 +107,7 @@ def api_controller(completionEvent, credentials, mode):
 
     @app.route("/shutdown", methods=["POST", "GET"])
     def shutdown():
-        completionEvent.set()
+        completion_event.set()
         return """{'message': 'Shutdown flag is set' }"""
 
     serve(app, port=6060)

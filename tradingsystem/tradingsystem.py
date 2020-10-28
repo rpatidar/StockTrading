@@ -3,9 +3,9 @@ from db.storage import StorageHandler
 
 
 class TradingSystem(object):
-    def __init__(self, credential, configuration, tradeRunner, stratagies):
+    def __init__(self, credential, configuration, trade_runner, stratagies):
         self.stratagies = stratagies
-        self.tradingAPI = TradingAPI(credential, configuration, tradeRunner)
+        self.tradingAPI = TradingAPI(credential, configuration, trade_runner)
         self.tradingAPI.on_tick_update(self.record_in_db)
         self.tradingAPI.on_tick_update(self.strategy_runner)
         self.tradingAPI.on_day_closure(self.day_closure)

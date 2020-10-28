@@ -1,5 +1,4 @@
 import datetime
-import threading
 from collections import OrderedDict
 
 from db.storage import StorageHandler
@@ -9,6 +8,7 @@ class Strategy:
     def __init__(self):
 
         self.stock_trading_days = {}
+        self.market_history = {}
         pass
 
     def _get_create_or_get_day_history(
@@ -25,7 +25,7 @@ class Strategy:
 
         if readonly:
             script_history = self.market_history.get(script)
-            return script_history[date] if script_history != None else None
+            return script_history[date] if script_history is not None else None
 
         script_history = self.market_history.setdefault(
             script, {"1minute": OrderedDict, "5minute": OrderedDict()}
@@ -33,7 +33,7 @@ class Strategy:
 
         # script_history = self.market_history.setdefault(script, OrderedDict())
 
-        if aggregate != None:
+        if aggregate is not None:
             trading_data = script_history.setdefault(
                 date, {"date": date, "trading_data": []}
             )
@@ -81,7 +81,7 @@ class Strategy:
             last_aggregate_time=last_aggregate_time,
             agg_type=agg_type,
         )
-        if last_stock_trading_data != None:
+        if last_stock_trading_data is not None:
             self._get_create_or_get_day_history(
                 instrument_token,
                 timestamp,
@@ -93,7 +93,8 @@ class Strategy:
             )
         pass
 
-    def get_previous_aggregate_timestamp(self, timestamp, agg_type=1):
+    @staticmethod
+    def get_previous_aggregate_timestamp(timestamp, agg_type=1):
         current_minute = timestamp.replace(
             minute=int(timestamp.minute / agg_type) * agg_type, second=0, microsecond=0
         )
@@ -106,7 +107,7 @@ class Strategy:
 
     def get_trading_history_for_day(self, script, date, previous_day, agg_type=1):
         script_all_aggregate = self.market_history.get(script)
-        if script_all_aggregate == None:
+        if script_all_aggregate is None:
             return None
 
         script_history = script_all_aggregate.get(str(agg_type) + "minute")
@@ -122,37 +123,40 @@ class Strategy:
         else:
             return None
 
-    def to_date(self, trading_data_day):
+    @staticmethod
+    def to_date(trading_data_day):
         data = []
-        if trading_data_day == None:
+        if trading_data_day is None:
             return data
         for ohlc in trading_data_day["trading_data"]:
             data.append(ohlc["date"])
         return data
 
-    def holc_to(self, trading_data_day, type):
+    @staticmethod
+    def holc_to(trading_data_day, type):
         data = []
-        if trading_data_day == None:
+        if trading_data_day is None:
             return data
         for ohlc in trading_data_day["trading_data"]:
             data.append(ohlc["low"])
         return data
 
+    @staticmethod
     def get_simple_day_history(
-        self, date, instrument_token, last_aggregate_time=None, agg_type=1
+        date, instrument_token, last_aggregate_time=None, agg_type=1
     ):
         sh = StorageHandler()
         full_stock_history = sh.get_db().get(instrument_token, None)
         required_data = []
 
-        if full_stock_history == None:
+        if full_stock_history is None:
             return None
 
-        if last_aggregate_time != None:
+        if last_aggregate_time is not None:
             res = full_stock_history.get(str(agg_type) + "minute").get(
                 last_aggregate_time
             )
-            if res == None:
+            if res is None:
 
                 return None
             else:
