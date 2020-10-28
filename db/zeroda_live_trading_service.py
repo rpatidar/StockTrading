@@ -174,12 +174,13 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             )
 
     def log_trade(self, trade_type, fnc_type, date, price, symbol):
+        dt = self.to_readable_date(date)
         f = [
             ["Symbol", symbol],
             ["TradeType", trade_type],
             ["Function", fnc_type],
-            ["Date", date.strftime("%y-%m-%d")],
-            ["Time", date.strftime("%H-%M-%S")],
+            ["Date", dt.strftime("%y-%m-%d")],
+            ["Time", dt.strftime("%H-%M-%S")],
             ["Price", price],
         ]
         f = tabulate(f)
