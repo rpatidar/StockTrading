@@ -26,7 +26,7 @@ PROXY = "http://127.0.0.1:6060"
 
 
 def run(options, start_index, end_index, psnumber, tickQueue, completionEvent):
-    setup_logging(psnumber)
+    setup_logging("strategyrunner_" + str(psnumber))
     tradeRunner = (
         QueueBasedServiceOnline
         if options.args.mode == "live" or options.args.mode == "audit"

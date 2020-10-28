@@ -8,7 +8,7 @@ from db.zeroda_live_trading_service import ZerodhaLiveTradingService
 
 
 def api_controller(completionEvent, credentials, mode):
-    setup_logging("controller")
+    setup_logging("apihandler")
     from flask import Flask
     from waitress import serve
     from flask_cors import CORS

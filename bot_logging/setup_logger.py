@@ -5,7 +5,7 @@ def setup_logging(pnumber):
     from logging.handlers import TimedRotatingFileHandler
 
     handler = TimedRotatingFileHandler(
-        "./logs/automatedtrader.log_" + str(pnumber),
+        "./logs/automatedtraderlog." + str(pnumber),
         when="h",
         interval=1,
         backupCount=5,
