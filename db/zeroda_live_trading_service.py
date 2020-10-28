@@ -63,7 +63,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
 
         # This logic should be updated by checking the actual amount and the leverage we can have self.margin_info[symbol]['leverage_margin']
         self.quantity_tracker[symbol] = (
-            int(5000 / price) if price < 5000 and self.ongoing_trades < 5 else 1
+            int(10000 / price) if price < 10000 and self.ongoing_trades < 10 else 1
         )
         # self.quantity_tracker[symbol] = 1
 
