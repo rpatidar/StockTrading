@@ -26,7 +26,7 @@ def generate_summery(summery_file="../tmp/summery/history.json"):
     import pandas as pd
 
     df = pd.DataFrame(trades)
-    df = df.sort_values("profit_loss")
+    # df = df.sort_values("profit_loss")
     print(df.to_string())
     print("=========================================\n")
     print("Total Profit/Loss = {}".format(total_pl))

@@ -26,7 +26,6 @@ class TrendlineStrategy(Strategy):
         """
         self.agg_time = 5
         self.pending_trades = {}
-
         # self.last_closure = {}
 
     def close_day(self, date, instrument_token, backfill=False):
@@ -115,7 +114,7 @@ class TrendlineStrategy(Strategy):
             #     self.pending_trades[instrument_token] = None
             #     return
 
-            if open_position_info != None:
+            if open_position_info is not None:
 
                 exit_signal, stop_loss = self.check_for_exit_signal(
                     instrument_token, h, open_position_info, tick_data
@@ -234,7 +233,7 @@ class TrendlineStrategy(Strategy):
         """worst case Stop loss could be any percentage may be more than 
         0.5 or 1% as its calculated mathamatically and buying could happen above the trend line """
         stop_loss = (len(h)) * (trend_info["slope"]) + trend_info["coefficient"]
-        stop_loss = 0.985 * stop_loss
+        stop_loss = 0.990 * stop_loss
         # Change to low to make or change logic based on 1 minute candle
         exit_signal = stop_loss > tick_data["ohlc"]["close"]
 
@@ -246,27 +245,31 @@ class TrendlineStrategy(Strategy):
             / open_position_info["entry_price"]
         ) * 100
 
-        # Change the Sell Signal to false.
-        if exit_signal and -1.5 < current_pl:
-            return False, stop_loss
+        # if current_pl > 3:
+        #     return True, tick_data['ohlc']['close']
+        # # Change the Sell Signal to false.
+        # if exit_signal and -1 < current_pl:
+        #     return False, stop_loss
 
         if self.trend_following.get(instrument_token):
             sl = self.trend_following[instrument_token]["stop_loss"]
             if sl < tick_data["ohlc"]["high"]:
                 self.trend_following[instrument_token] = None
+                print("Stop loss hit")
                 return True, sl
 
         # Worst case condition it was never hit Changed from < to >,
-        if -2 > current_pl:
+        if -1.5 > current_pl:
             return (
                 True,
                 tick_data["ohlc"]["close"],
             )  # open_position_info["entry_price"] * 0.980
         # Current PL changed < to >
-        if -1.5 > current_pl:
+        if -0.75 > current_pl:
             self.trend_following[instrument_token] = {
-                "stop_loss": open_position_info["entry_price"] * 0.990
+                "stop_loss": open_position_info["entry_price"] * 1.005
             }
+            return False, stop_loss
         return exit_signal, stop_loss
 
     def execute_strategy_to_check_entry_signal(

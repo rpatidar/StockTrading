@@ -140,6 +140,8 @@ class ZerodhaServiceBase(TradingService):
             filehandler.close()
             return trading_data
 
+    @on_exception(expo, requests.exceptions.ConnectionError, max_tries=8)
+    @on_exception(expo, requests.exceptions.ReadTimeout, max_tries=8)
     @on_exception(expo, ratelimit.RateLimitException, max_tries=8)
     @limits(calls=3, period=1)
     def rate_limited_historical_data_fetch(self, from_date, instrument_token, to_date):
