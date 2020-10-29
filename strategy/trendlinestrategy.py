@@ -89,6 +89,17 @@ class TrendlineStrategy(Strategy):
                 > self.pending_trades[instrument_token]["input_record"][3]
             ):
                 parms = self.pending_trades[instrument_token]["input_record"]
+                op = {
+                    'entry_price': tick_data['ohlc']['close'],
+                    'execution_info': parms[5]
+                }
+
+                exit_signal, stop_loss = self.check_for_exit_signal(
+                    instrument_token, h, op, tick_data, mock_check=True
+                )
+                if exit_signal:
+                    continue
+
                 #                self.pending_trades[instrument_token]['activation'] = True
                 # print("Entering the instrument at later stage to test the limit orders ")
                 # tb.enter(*self.pending_trades[instrument_token]["input_record"])
@@ -184,11 +195,15 @@ class TrendlineStrategy(Strategy):
                 bug_signal, trend_info = self.execute_strategy_to_check_entry_signal(
                     h, raw_trading_data, tick_data, timestamp
                 )
+                tinfo = {"trend_info": trend_info, "entry_ps": len(h) - 1}
+
+
                 if bug_signal:  # and two_pm_for_day > trade_time:
                     # Very Little bit of approximation  on the points,
                     # but a major in case if its across the days
                     # trade_data = raw_trading_data[-1]
                     # This will overwrite the entry signal
+
                     self.flag = instrument_token
                     self.pending_trades[instrument_token] = {
                         "input_record": (
@@ -197,7 +212,7 @@ class TrendlineStrategy(Strategy):
                             tick_data["ohlc"]["date"],
                             tick_data["ohlc"]["close"] * 1.003,
                             "Trendline",
-                            {"trend_info": trend_info, "entry_ps": len(h) - 1},
+                            tinfo,
                         ),
                         "activation": False,
                     }
@@ -227,7 +242,7 @@ class TrendlineStrategy(Strategy):
         h = current_aggregate
         return h, raw_trading_data
 
-    def check_for_exit_signal(self, instrument_token, h, open_position_info, tick_data):
+    def check_for_exit_signal(self, instrument_token, h, open_position_info, tick_data, mock_check=False):
         trend_info = open_position_info["execution_info"]["trend_info"]
         # Detect the stop loss based on the trend line and also keep a margin of .5 percent below trendline.
         """worst case Stop loss could be any percentage may be more than 
@@ -265,9 +280,9 @@ class TrendlineStrategy(Strategy):
                 tick_data["ohlc"]["close"],
             )  # open_position_info["entry_price"] * 0.980
         # Current PL changed < to >
-        if -0.75 > current_pl:
+        if -0.75 > current_pl and  mock_check is not False:
             self.trend_following[instrument_token] = {
-                "stop_loss": open_position_info["entry_price"] * 1.005
+                "stop_loss": open_position_info["entry_price"] * 0.975
             }
             return False, stop_loss
         return exit_signal, stop_loss
