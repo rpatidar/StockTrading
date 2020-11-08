@@ -252,6 +252,9 @@ class TrendlineStrategy(Strategy):
         # Change to low to make or change logic based on 1 minute candle
         exit_signal = stop_loss > tick_data["ohlc"]["close"]
 
+        if mock_check and exit_signal:
+            return True, 0.0
+
         # Lets not sell if the loss is not high,
         # very critical in avoiding unnecessary losses.
         # TODO: validate adding a Stop Loss on maximum loss can be incurred and run backtest for a 1 year
@@ -274,18 +277,21 @@ class TrendlineStrategy(Strategy):
                 return True, sl
 
         # Worst case condition it was never hit Changed from < to >,
-        if -1.5 > current_pl:
-            return (
-                True,
-                tick_data["ohlc"]["close"],
-            )  # open_position_info["entry_price"] * 0.980
+        # if -0.6 > current_pl:
+        #     return (
+        #         True,
+        #         tick_data["ohlc"]["close"],
+        #     )  # open_position_info["entry_price"] * 0.980
         # Current PL changed < to >
-        if -0.75 > current_pl and  mock_check is not False:
-            self.trend_following[instrument_token] = {
-                "stop_loss": open_position_info["entry_price"] * 0.975
-            }
+        # if -0.75 > current_pl and  mock_check is not False:
+        #     self.trend_following[instrument_token] = {
+        #         "stop_loss": open_position_info["entry_price"] * 0.975
+        #     }
+        #     return False, stop_loss
+
+        if current_pl < 2 and current_pl  > -1 :
             return False, stop_loss
-        return exit_signal, stop_loss
+        return True, tick_data["ohlc"]["close"]
 
     def execute_strategy_to_check_entry_signal(
         self, h, raw_trading_data, tick_data, timestamp

@@ -6,8 +6,13 @@ import datetime, os
 
 
 def prerequisite_multiprocess(api_key, api_secret, clean_credential=False):
-    session_file = "./tmp/session_file"
+    mock_file = "./tmp/mock"
+    mock = open(mock_file, "r").read() if os.path.exists(mock_file) else "0"
+    if mock == "1":
+        return
 
+    session_file = "./tmp/session_file"
+    return ""
     def _save_session(token):
         import json
 
