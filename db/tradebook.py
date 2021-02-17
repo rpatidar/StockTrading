@@ -19,6 +19,9 @@ class TradeBook(metaclass=Singleton):
     def register_trading_service(self, trading_service):
         self.trading_service = trading_service
 
+    def get_trading_service(self):
+        return self.trading_service
+
     def enter(
         self, trade_type, instrument_token, date, price, strategy, stragegy_context
     ):

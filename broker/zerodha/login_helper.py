@@ -12,7 +12,8 @@ def prerequisite_multiprocess(api_key, api_secret, clean_credential=False):
         return
 
     session_file = "./tmp/session_file"
-    return ""
+    #Uncomment it for testing
+    #return ""
     def _save_session(token):
         import json
 

@@ -2,6 +2,8 @@ import sys
 import datetime
 import logging
 import time
+
+from strategy.range_breakout import RangeBreakout
 from utility_programs.analyze_summery import generate_summery
 from api.bot_api import api_controller
 from broker.indan_stock import get_datetime
@@ -66,10 +68,6 @@ def run(options, start_index, end_index, psnumber, tickQueue, completion_event):
             "proxy": PROXY,
             "mode": options.args.mode,
         }
-    # run trading system
-    tradingSystem = TradingSystem(
-        credentials, configuration, trade_runner, [TrendlineStrategy()]
-    )
 
     # Use tradebook and get summary
     tradeBook = TradeBook()
@@ -87,6 +85,11 @@ def run(options, start_index, end_index, psnumber, tickQueue, completion_event):
             )
         )
 
+    # run trading system
+    tradingSystem = TradingSystem(
+        credentials, configuration, trade_runner, [RangeBreakout()]
+    )
+
     tradingSystem.run()
 
     if options.args.mode == "live" or options.args.mode == "audit":
@@ -98,7 +101,7 @@ def main():
     setup_logging("main")
     options = TradingOptions()
     messenger = Messenger(options.args.mode)
-    clean_credentials = False  # options.args.mode == "live"
+    clean_credentials = True  # options.args.mode == "live"
     prerequisite_multiprocess(
         credentials["api_key"], credentials["api_secret"], clean_credentials
     )
@@ -137,7 +140,7 @@ def trigger_childprocess(completion_event, options):
     broadcastQ = []
     ps = []
     nstocks = len(options.getStocks())
-    ncpu = multiprocessing.cpu_count()
+    ncpu = 1 #multiprocessing.cpu_count()
     if ncpu > 1:
         ncpu = ncpu - 1
     steps = int(nstocks / ncpu)

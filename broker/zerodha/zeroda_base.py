@@ -145,15 +145,17 @@ class ZerodhaServiceBase(TradingService):
     @on_exception(expo, ratelimit.RateLimitException, max_tries=8)
     @limits(calls=3, period=1)
     def rate_limited_historical_data_fetch(self, from_date, instrument_token, to_date):
-        trading_data = self.kite.historical_data(
-            instrument_token,
-            from_date,
-            to_date,
-            "minute",
-            continuous=False,
-            oi=False,
-        )
-        return trading_data
+        from zerodha_memory_feed import ZerodhaFeed
+        return ZerodhaFeed(kite=self.kite).get_history(self.get_symbol_and_exchange(instrument_token)[0], from_date, to_date)
+        # trading_data = self.kite.historical_data(
+        #     instrument_token,
+        #     from_date,
+        #     to_date,
+        #     "minute",
+        #     continuous=False,
+        #     oi=False,
+        # )
+        # return trading_data
 
     def execute_strategy_single_stock_historical(
         self, instrument_token, stock, stock_config, backfill=False
@@ -179,7 +181,7 @@ class ZerodhaServiceBase(TradingService):
         previous_date = None
         for trade_data in trading_data:
             # Destroying the data immutability, should fix in the right way
-            trade_data["date"] = trade_data["date"].replace(tzinfo=None)
+            trade_data["date"] = trade_data["date"]#.replace(tzinfo=None)
             # ohlc = copy.deepcopy(ohlcp)
             if (
                 previous_date != None
