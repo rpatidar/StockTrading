@@ -19,7 +19,7 @@ class TradingSystem(object):
         ohlc_new["high"] = max(ohlc1["high"], ohlc2["high"])
         ohlc_new["open"] = ohlc1["open"]
         ohlc_new["close"] = ohlc2["close"]
-
+        ohlc_new['volume'] = ohlc1['volume'] + ohlc2['volume']
         # ohlc_new['volume'] = ohlc1['volume'] + ohlc2['volume']
         return ohlc_new
 
@@ -47,21 +47,34 @@ class TradingSystem(object):
             sh.get_db().setdefault(it, {"1minute": {}, "5minute": {}})
 
             """ 1 Minute and 5 minute aggregation assuming the tick data is of any """
-            for agg_type in [1, 5]:
+            for agg_type in [1]:
                 agg_key = str(agg_type) + "minute"
-                agg_data = sh.get_db()[it][agg_key]
                 last_agg_minute = (int(timestamp.minute / agg_type)) * agg_type
                 agg_datetime = timestamp.replace(
                     minute=last_agg_minute, second=0, microsecond=0
                 )
+                trading_date = timestamp.date()
+                record = None
+                inst_data = sh.get_db()[it][agg_key]
+                # if inst_data is None:
+                #     inst_data = []
+                #     sh.get_db()[it][agg_key] = inst_data
 
-                if agg_datetime in agg_data:
-                    updated_agg = self.__get_ohlc(agg_data[agg_datetime], ohlc)
-                    agg_data[agg_datetime] = updated_agg
-                    updated_agg["date"] = agg_datetime
+                last_day_records = inst_data.get(trading_date)
+                if last_day_records is None:
+                    last_day_records = []
+                    inst_data[trading_date] = last_day_records
+                if len(last_day_records) > 0 and last_day_records[-1]['date'] == agg_datetime:
+                        record = last_day_records[-1]
+                if record is not None:
+                    print("Never comes in here")
+                    updated_record = self.__get_ohlc(record, ohlc)
+                    updated_record['date'] = agg_datetime
+                    last_day_records[-1] = updated_record
                 else:
-                    agg_data[current_time] = ohlc
-                    ohlc["date"] = agg_datetime
+                    #TODO: Create a deep copy?
+                    ohlc['date'] = agg_datetime
+                    last_day_records.append(ohlc)
 
             # print("Recording data in DB" + str(tick_data))
 
