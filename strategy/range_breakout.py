@@ -15,6 +15,8 @@ class RangeBreakout(Strategy):
         self.open_position = {}
         self.pl = {}
         self.last_date = {}
+        self.last_closing_price = {}
+        self.invalid_setup = {}
         self.cached_date = {"reference_date": None, "last_trading_date": None}
 
     def _get_last_trading_date(self, reference_date, inst_token):
@@ -38,13 +40,17 @@ class RangeBreakout(Strategy):
         if backfill:
             return
         sh = StorageHandler()
+        trading_sevice = self.tb.get_trading_service();
+        symbol, _ = trading_sevice.get_symbol_and_exchange(instrument_token)
+
+        stock_history = StorageHandler().get_db()[instrument_token]["1minute"]
+        last_date = sorted(stock_history.keys())[-1]
+        closing_price =  stock_history[last_date][-1]['close']
         position = self.open_position.get(instrument_token)
         if position is not None:
             if position.get('exit_price') is None:
                 #print("Day Closing exit")
-                stock_history = StorageHandler().get_db()[instrument_token]["1minute"]
-                last_date = sorted(stock_history.keys())[-1]
-                position['exit_price'] = stock_history[last_date][-1]['close']
+                position['exit_price'] = closing_price
                 position['exit_timestamp'] = "DayClosure"
 
             stock_pl = self.pl.get(instrument_token)
@@ -56,11 +62,16 @@ class RangeBreakout(Strategy):
             stock_pl['pl']= stock_pl['pl'] + current_pl
             stock_pl['brokerage'] = stock_pl['brokerage'] + current_brokerge
             #print(position)
-            print(str(position['entry_timestamp']) +"," + str(position['quantity'])+"," + str(current_pl)  +"," + str(position['entry_price'])+"," + str(position['exit_price']))
+            #plfile = open("./pl.csv", "w+")
+            print(str(symbol) + "," + str(position['entry_timestamp']) +"," + str(position['exit_timestamp']) +","+ str(current_pl)  +"," + str(position['quantity'])+","  + str(position['entry_price'])+"," + str(position['exit_price']))
+            #plfile.close()
             print(stock_pl)
 
+        self.last_closing_price[instrument_token] = closing_price
+        #invalid setup
         #Close
         self.open_position[instrument_token] = None
+        self.invalid_setup[instrument_token] = None
 
 
     def run(self, ticks, timestamp, backfill=False):
@@ -70,13 +81,17 @@ class RangeBreakout(Strategy):
             trading_data = tick_data["ohlc"]
             current_date = tick_data["ohlc"]['date'].date()
             last_date = self.last_date.get(instrument_token)
+            #Need to handle the first candle for streaming data seprately
             first_candle = last_date != current_date
             self.last_date[instrument_token] = current_date
             service = self.tb.get_trading_service()
             sh = StorageHandler()
             stock_history = sh.get_db()[instrument_token]["1minute"] #self.cache[instrument_token]
 
-            if first_candle:
+            if last_date is None or first_candle and trading_data['open'] > self.last_closing_price[instrument_token] * 1.01 :
+                self.invalid_setup[instrument_token] = True
+
+            if self.invalid_setup.get(instrument_token):
                 continue
 
             last_trading_date = self._get_last_trading_date(current_date, instrument_token)
@@ -92,6 +107,10 @@ class RangeBreakout(Strategy):
                     #realtime tick data is variable, we need to fix it accordingly
                     k = len(current_day_trading_data)
                     max_len = len(last_trading_data)
+                    if len(last_trading_data) < len(current_day_trading_data):
+                        #Some invalid case.
+                        continue
+
                     for i in range(max_len):
                         d = last_trading_data[i]
                         if lh is None:
@@ -107,16 +126,16 @@ class RangeBreakout(Strategy):
                     for todays_tick in current_day_trading_data:
                         vol_today = vol_today + todays_tick['volume']
                     #This is an assumption that our tick data in real time and we meet a buy order on certain price when it occures.
-                    if tick_data['ohlc']['high'] > lh * 1.01 and vol_today > lv * 2:
-                        stop_loss = tick_data['ohlc']['close'] * 0.985
+                    if trading_data['high'] > lh * 1.01 and vol_today > lv * 2:
+                        stop_loss = trading_data['close'] * 0.985
                         stop_loss_for_quantity =  (lh + ll) / 2
                         quantity = int(1000/(stop_loss_for_quantity - ll))
-                        if quantity * tick_data['ohlc']['close'] > 200000:
-                            quantity = int(200000/tick_data['ohlc']['close'])
+                        if quantity * trading_data['close'] > 200000:
+                            quantity = int(200000/trading_data['close'])
                         target = lh * 1.06
 
                         self.open_position[instrument_token] = {"quantity": quantity,
-                                                                "entry_price": lh * 1.01,
+                                                                "entry_price":  trading_data['close'],
                                                                 "stop_loss": stop_loss,
                                                                 "target": target,
                                                                 "entry_timestamp" : timestamp,
