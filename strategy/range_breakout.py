@@ -52,19 +52,19 @@ class RangeBreakout(Strategy):
                 #print("Day Closing exit")
                 position['exit_price'] = closing_price
                 position['exit_timestamp'] = "DayClosure"
-
-            stock_pl = self.pl.get(instrument_token)
+            tracking_pl= "ABC"
+            stock_pl = self.pl.get(tracking_pl)
             if stock_pl == None:
                 stock_pl = {'pl' : 0, 'brokerage': 0}
-                self.pl[instrument_token] = stock_pl
+                self.pl[tracking_pl] = stock_pl
             current_pl = (position['exit_price']  - position['entry_price'] ) * position['quantity']
             current_brokerge =  position['quantity'] * ( position['entry_price'] + position['exit_price'] ) * 0.0004
             stock_pl['pl']= stock_pl['pl'] + current_pl
             stock_pl['brokerage'] = stock_pl['brokerage'] + current_brokerge
             #print(position)
-            #plfile = open("./pl.csv", "w+")
-            print(str(symbol) + "," + str(position['entry_timestamp']) +"," + str(position['exit_timestamp']) +","+ str(current_pl)  +"," + str(position['quantity'])+","  + str(position['entry_price'])+"," + str(position['exit_price']))
-            #plfile.close()
+            plfile = open("./pl.csv", "a")
+            plfile.write(str(symbol) + "," + str(position['entry_timestamp']) +"," + str(position['exit_timestamp']) +","+ str(current_pl)  +"," + str(position['quantity'])+","  + str(position['entry_price'])+"," + str(position['exit_price']) +"\n")
+            plfile.close()
             print(stock_pl)
 
         self.last_closing_price[instrument_token] = closing_price
@@ -132,10 +132,11 @@ class RangeBreakout(Strategy):
                         quantity = int(1000/(stop_loss_for_quantity - ll))
                         if quantity * trading_data['close'] > 200000:
                             quantity = int(200000/trading_data['close'])
-                        target = lh * 1.06
+                        target = lh * 1.04
 
                         self.open_position[instrument_token] = {"quantity": quantity,
-                                                                "entry_price":  trading_data['close'],
+                                                                #This is making a huge differrence, need to close on this.
+                                                                "entry_price":  lh * 1.01, # trading_data['close'],
                                                                 "stop_loss": stop_loss,
                                                                 "target": target,
                                                                 "entry_timestamp" : timestamp,
