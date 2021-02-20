@@ -101,7 +101,7 @@ def main():
     setup_logging("main")
     options = TradingOptions()
     messenger = Messenger(options.args.mode)
-    clean_credentials = True  # options.args.mode == "live"
+    clean_credentials = False  # options.args.mode == "live"
     prerequisite_multiprocess(
         credentials["api_key"], credentials["api_secret"], clean_credentials
     )
