@@ -6,7 +6,6 @@ from strategy.strategy import Strategy
 import pandas as pd
 from db.storage import StorageHandler
 
-
 class RangeBreakout(Strategy):
     def __init__(self):
 
@@ -77,6 +76,7 @@ class RangeBreakout(Strategy):
     def run(self, ticks, timestamp, backfill=False):
 
         for tick_data in ticks:
+            #print("Tick...")
             instrument_token = tick_data["instrument_token"]
             trading_data = tick_data["ohlc"]
             current_date = tick_data["ohlc"]['date'].date()
@@ -87,8 +87,9 @@ class RangeBreakout(Strategy):
             service = self.tb.get_trading_service()
             sh = StorageHandler()
             stock_history = sh.get_db()[instrument_token]["1minute"] #self.cache[instrument_token]
-
-            if last_date is None or first_candle and trading_data['open'] > self.last_closing_price[instrument_token] * 1.01 :
+            rr  = 1.02
+            rr  = 1.02
+            if last_date is None or first_candle and trading_data['open'] > self.last_closing_price[instrument_token] * rr :
                 self.invalid_setup[instrument_token] = True
 
             if self.invalid_setup.get(instrument_token):
@@ -100,6 +101,8 @@ class RangeBreakout(Strategy):
                 last_trading_data = stock_history[last_trading_date]
             current_day_trading_data = stock_history[current_date]
             position = self.open_position.get(instrument_token)
+            if len(current_day_trading_data) < 5:
+                continue
             if position is None:
                 lh, ll, lv = None, None, 0
                 if last_trading_data != None:
@@ -123,20 +126,22 @@ class RangeBreakout(Strategy):
                             lv = lv + d['volume']
 
                     vol_today = 0
+
                     for todays_tick in current_day_trading_data:
                         vol_today = vol_today + todays_tick['volume']
+                    #print(vol_today, lv)
                     #This is an assumption that our tick data in real time and we meet a buy order on certain price when it occures.
-                    if trading_data['high'] > lh * 1.01 and vol_today > lv * 2:
-                        stop_loss = trading_data['close'] * 0.985
+                    if current_day_trading_data[-2]['close'] < lh * rr and trading_data['high'] > lh * rr :#and vol_today > lv:
+                        stop_loss =  ll # 0.995 #trading_data['close'] * 0.985
                         stop_loss_for_quantity =  (lh + ll) / 2
                         quantity = int(1000/(stop_loss_for_quantity - ll))
                         if quantity * trading_data['close'] > 200000:
                             quantity = int(200000/trading_data['close'])
-                        target = lh * 1.04
+                        target = lh * 1.10
 
                         self.open_position[instrument_token] = {"quantity": quantity,
                                                                 #This is making a huge differrence, need to close on this.
-                                                                "entry_price":  lh * 1.01, # trading_data['close'],
+                                                                "entry_price":  lh * rr, # trading_data['close'],
                                                                 "stop_loss": stop_loss,
                                                                 "target": target,
                                                                 "entry_timestamp" : timestamp,
