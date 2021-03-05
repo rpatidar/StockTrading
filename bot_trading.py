@@ -4,6 +4,9 @@ import logging
 import time
 
 from strategy.range_breakout import RangeBreakout
+from strategy.supertrendstrategy import SuperTrendStrategy
+from strategy.sma_crossover import SMACrossOver
+from strategy.mean_reversion_rsi import RSIMeanReversion
 from utility_programs.analyze_summery import generate_summery
 from api.bot_api import api_controller
 from broker.indan_stock import get_datetime
@@ -22,7 +25,7 @@ import multiprocessing as mp
 from broker.zerodha.login_helper import prerequisite_multiprocess
 import multiprocessing
 from utils.credential_helper import get_zerodha_credentails
-
+import threading
 credentials = get_zerodha_credentails()
 PROXY = "http://127.0.0.1:6060"
 
@@ -62,6 +65,13 @@ def run(options, start_index, end_index, psnumber, tickQueue, completion_event):
             )
             for s in options.getStocks()[start_index:end_index]
         )
+        #Hard coding to run on NIFTY BANK as space are not supported
+        # stock_input = {
+        #         "NIFTY BANK": {
+        #             "from": datetime.datetime.strptime(options.args.start, "%Y-%m-%d"),
+        #             "to": datetime.datetime.strptime(options.args.end, "%Y-%m-%d"),
+        #     }
+        # }
 
         configuration = {
             "back_testing_config": {"stocks_config": stock_input},
@@ -85,9 +95,14 @@ def run(options, start_index, end_index, psnumber, tickQueue, completion_event):
             )
         )
 
+    stry = {"meanreversion": RSIMeanReversion,
+            "supertrend": SuperTrendStrategy,
+            "openingrangebreakout": RangeBreakout,
+            "smacrossover": SMACrossOver}[options.args.tradingstrategy]
+
     # run trading system
     tradingSystem = TradingSystem(
-        credentials, configuration, trade_runner, [RangeBreakout()]
+        credentials, configuration, trade_runner, [stry()]
     )
 
     tradingSystem.run()
@@ -106,17 +121,19 @@ def main():
         credentials["api_key"], credentials["api_secret"], clean_credentials
     )
 
+    process_controller = mp.Process if options.args.multiprocess else threading.Thread
+
     completion_event = mp.Event()
 
     # Server Process to listen to the api calls and server the get put events.
-    server = mp.Process(
+    server = process_controller(
         target=api_controller, args=(completion_event, credentials, options.args.mode)
     )
     server.start()
     time.sleep(2)
     try:
         print("S :" + str(datetime.datetime.now()))
-        ps, broadcastQ = trigger_childprocess(completion_event, options)
+        ps, broadcastQ = trigger_childprocess(completion_event, options, process_controller)
         if options.args.mode == "live" or options.args.mode == "audit":
             handle_realtime_trades(broadcastQ, completion_event, options, server)
         else:
@@ -136,7 +153,7 @@ def main():
     generate_summery(summery_file="./tmp/summery/history.json")
 
 
-def trigger_childprocess(completion_event, options):
+def trigger_childprocess(completion_event, options, process_controller):
     broadcastQ = []
     ps = []
     nstocks = len(options.getStocks())
@@ -153,7 +170,8 @@ def trigger_childprocess(completion_event, options):
         end_index = i + steps
         process_number = str(i / steps)
         # Smaller process to server the specific type of trend detection on some CPU
-        p = mp.Process(
+
+        p = process_controller(
             target=run,
             args=(
                 options,

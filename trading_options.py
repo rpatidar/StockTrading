@@ -28,6 +28,15 @@ class TradingOptions:
         self.parser.add_argument(
             "-e", "--end", type=str, help="end date", default="2019-12-31"
         )
+
+        self.parser.add_argument(
+            "-m", "--multiprocess", type=bool, help="Multi process to make things fast, it makes debugging difficult", default=False
+        )
+
+        self.parser.add_argument(
+            "-t", "--tradingstrategy", type=str, help="Trading Strategy [meanreversion,supertrend,openingrangebreakout,smacrossover]", default="meanreversion"
+        )
+
         # Execute the parse_args() method
         self.args = self.parser.parse_args()
 
@@ -37,5 +46,5 @@ class TradingOptions:
         stocks = []
         with open(self.args.file) as f:
             for content in f:
-                stocks.extend([x.strip() for x in content.split(" ")])
+                stocks.append(content)
         return stocks
