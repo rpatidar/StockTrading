@@ -46,5 +46,5 @@ class TradingOptions:
         stocks = []
         with open(self.args.file) as f:
             for content in f:
-                stocks.append(content)
+                stocks.append(content.strip("\n"))
         return stocks

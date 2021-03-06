@@ -1,22 +1,15 @@
-from kiteconnect import KiteConnect
-from math import floor, ceil
-import datetime
 import pandas as pd
-import numpy as np
-import sys
-import os
-import time
-import pandas as pd
+
+from db.storage import StorageHandler
 from db.tradebook import TradeBook
 from strategy.strategy import Strategy
-import pandas as pd
-from db.storage import StorageHandler
-import talib
 
-risk_per_trade = 100 # if stoploss gets triggers, you loss will be this, trade quantity will be calculated based on this
+risk_per_trade = 100  # if stoploss gets triggers, you loss will be this, trade quantity will be calculated based on this
 supertrend_period = 30
-supertrend_multiplier=3
+supertrend_multiplier = 3
 candlesize = '5minute'
+
+from talipp.indicators import SMA, RSI
 
 
 class RSIMeanReversion(Strategy):
@@ -25,52 +18,68 @@ class RSIMeanReversion(Strategy):
         self.tb = TradeBook()
         self.open_position = {}
         self.pl = {}
-        self.last_ticks = {}
+        self.last_ticks_time = {}
         self.last_date = {}
-        self.last_closing_price = {}
+        self.days_prices = {}
         self.invalid_setup = {}
         self.price_data_for_days = 10
         self.total_pl = 0
+        self.instrument_data = {}
+        self.setup_meets_criteria = {}
+        self.cache_data = {}
+        self.total_pl = 0
+
     def close_day(self, date, instrument_token, backfill=False):
+
+        inst_data = self.instrument_data.get(instrument_token)
+        symbol, exchange = self.tb.get_trading_service().get_symbol_and_exchange(instrument_token)
+        previous_cached_info = self.cache_data.get(instrument_token)
+        if previous_cached_info != None:
+            _, _, position = previous_cached_info
+            if position != None:
+                if position.get("exit_price") == None:
+                    position["exit_price"] = self.days_prices[instrument_token]['close']
+                pl = (position['entry_price'] - position['exit_price']) / position['entry_price'] * 100
+                self.total_pl += pl
+
+                print("PL," ,symbol , ",", str(pl),str(self.total_pl))
+
+        if inst_data == None:
+            inst_data = {
+                "numdays": 0,
+                "sma200": SMA(200),
+                "rsi2": RSI(period=2),
+                "daygain": 0
+            }
+            self.instrument_data[instrument_token] = inst_data
+
+        inst_data["numdays"] += 1
+        closing_price = self.days_prices[instrument_token]['close']
+        inst_data["sma200"].add_input_value(closing_price)
+        inst_data["rsi2"].add_input_value(closing_price)
+        inst_data["daygain"] = ((self.days_prices[instrument_token]['close'] - self.days_prices[instrument_token][
+            'open']) / self.days_prices[instrument_token]['open']) * 100
+
+        # print(inst_data["rsi2"][-1])
+        #print(self.days_prices[instrument_token])
+        if len(inst_data["sma200"]) > 0 and inst_data["sma200"][-1] < self.days_prices[instrument_token]['close'] and \
+                inst_data["rsi2"][-1] > 50 and \
+                inst_data['daygain'] > 3:
+            #print("Criteria meet on the date:" + str(date))
+            self.setup_meets_criteria[instrument_token] = {
+                "setup": True,
+                "sell_trigger_limit_price": self.days_prices[instrument_token]['close'] * 1.01
+            }
+        else:
+            self.setup_meets_criteria[instrument_token] = {
+                "setup": False
+            }
+
+        # if(len(inst_data["sma200"]) > 0):
+        # print(inst_data["sma200"])
+        self.cache_data[instrument_token] = None
         if backfill:
             return
-        # sh = StorageHandler()
-        # trading_sevice = self.tb.get_trading_service();
-        # symbol, _ = trading_sevice.get_symbol_and_exchange(instrument_token)
-        #
-        # stock_history = StorageHandler().get_db()[instrument_token]["1minute"]
-        # trading_dates = sorted(stock_history.keys())[-self.price_data_for_days:]
-        #
-        # closing_price = stock_history[trading_dates[-1]][-1]['close']
-        #
-        # position = self.open_position.get(instrument_token)
-        #
-        # if position is not None:
-        #
-        #     if position.get('exit_price') is None:
-        #         #print("Day Closing exit")
-        #         position['exit_price'] = closing_price
-        #         position['exit_timestamp'] = "DayClosure"
-        #     tracking_pl= "ABC"
-        #     stock_pl = self.pl.get(tracking_pl)
-        #     if stock_pl == None:
-        #         stock_pl = {'pl' : 0, 'brokerage': 0}
-        #         self.pl[tracking_pl] = stock_pl
-        #     current_pl = (position['exit_price']  - position['entry_price'] ) * position['quantity']
-        #     current_brokerge =  position['quantity'] * ( position['entry_price'] + position['exit_price'] ) * 0.0004
-        #     stock_pl['pl']= stock_pl['pl'] + current_pl
-        #     stock_pl['brokerage'] = stock_pl['brokerage'] + current_brokerge
-        #     #print(position)
-        #     plfile = open("./pl.csv", "a")
-        #     plfile.write(str(symbol) + "," + str(position['entry_timestamp']) +"," + str(position['exit_timestamp']) +","+ str(current_pl)  +"," + str(position['quantity'])+","  + str(position['entry_price'])+"," + str(position['exit_price']) +"\n")
-        #     plfile.close()
-        #     print(stock_pl)
-        #
-        # self.last_closing_price[instrument_token] = closing_price
-        # #invalid setup
-        # #Close
-        # self.open_position[instrument_token] = None
-        # self.invalid_setup[instrument_token] = None
 
     def get_last_n_days_ticks(self, instrument_token, last_n_days=10):
         stock_history = StorageHandler().get_db()[instrument_token]["1minute"]
@@ -82,18 +91,63 @@ class RSIMeanReversion(Strategy):
                 records.extend(stock_history[d])
             df = pd.DataFrame.from_dict(records, orient='columns', dtype=None)
             return df
-            #return records
+            # return records
         return None
 
     def run(self, ticks, timestamp, backfill=False):
-
         for tick_data in ticks:
             instrument_token = tick_data["instrument_token"]
             trading_data = tick_data["ohlc"]
+            previous_cached_info = self.cache_data.get(instrument_token)
+
+            last_close = None
+            day_opening = None
+            position = None
+            if previous_cached_info is not None:
+                last_close, day_opening, position = previous_cached_info
+
             current_date = tick_data["ohlc"]['date'].date()
             current_minute = tick_data["ohlc"]['date'].replace(second=0, microsecond=0)
-            if self.last_ticks.get(instrument_token) is not None and self.last_ticks.get(instrument_token) == current_minute:
+            first_candle = False
+            if self.last_ticks_time.get(instrument_token) is not None and self.last_ticks_time.get(
+                    instrument_token) == current_minute:
                 continue
+            setup_details = self.setup_meets_criteria.get(instrument_token)
+            day_ohlc = self.days_prices.get(instrument_token)
 
-            self.last_ticks[instrument_token] = current_minute
-            print("Compute the mean reversion.")
+            if day_ohlc is None:
+                first_candle = True
+                day_ohlc = {}
+                self.days_prices[instrument_token] = day_ohlc
+
+                # if setup_details is not None:
+                #     if setup_details['setup'] and setup_details['sell_trigger_limit_price'] < day_ohlc['open']:
+                #         #Invalid setup
+                #         print("Invalid as gap up opening")
+                #         setup_details['setup'] = False
+            if setup_details is not None:
+                if position is None:
+                    if last_close is not None and setup_details['setup'] and \
+                            trading_data['low'] < setup_details['sell_trigger_limit_price'] < trading_data['high']:
+                        position = {
+                            "entry_price": setup_details['sell_trigger_limit_price'],
+                            "target": setup_details['sell_trigger_limit_price'] * 0.94,
+                            "stop_loss": setup_details['sell_trigger_limit_price'] * 1.03,
+                        }
+                        print("Order meets the criteria");
+                else:
+                    if position["target"] > trading_data['low']:
+                        # print("Target meet")
+                        position["exit_price"] = position["target"]
+
+                    elif position["stop_loss"] < trading_data['high']:
+                        # print("Stoploss hit")
+                        position["exit_price"] = position["stop_loss"]
+
+            if self.last_date.get(instrument_token) != current_date:
+                day_opening = trading_data['open']
+                self.days_prices[instrument_token]['open'] = trading_data['open']
+            self.last_date[instrument_token] = current_date
+            self.last_ticks_time[instrument_token] = current_minute
+            self.days_prices[instrument_token]['close'] = trading_data['close']
+            self.cache_data[instrument_token] = (trading_data['close'], day_opening, position)

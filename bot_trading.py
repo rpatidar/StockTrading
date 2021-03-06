@@ -32,6 +32,7 @@ PROXY = "http://127.0.0.1:6060"
 
 def run(options, start_index, end_index, psnumber, tickQueue, completion_event):
     setup_logging("strategyrunner_" + str(psnumber))
+    print("Called: with start:end", start_index, end_index)
     trade_runner = (
         QueueBasedServiceOnline
         if options.args.mode == "live" or options.args.mode == "audit"
@@ -65,6 +66,7 @@ def run(options, start_index, end_index, psnumber, tickQueue, completion_event):
             )
             for s in options.getStocks()[start_index:end_index]
         )
+        print(stock_input)
         #Hard coding to run on NIFTY BANK as space are not supported
         # stock_input = {
         #         "NIFTY BANK": {
@@ -137,7 +139,7 @@ def main():
         if options.args.mode == "live" or options.args.mode == "audit":
             handle_realtime_trades(broadcastQ, completion_event, options, server)
         else:
-            handle_backtest_trades(completion_event, ps, server)
+            handle_backtest_trades(completion_event, ps, server, options)
     except:
         traceback.print_exc()
         e = sys.exc_info()
@@ -187,13 +189,14 @@ def trigger_childprocess(completion_event, options, process_controller):
     return ps, broadcastQ
 
 
-def handle_backtest_trades(completion_event, ps, server):
+def handle_backtest_trades(completion_event, ps, server, options):
     for p in ps:
         p.join()
     completion_event.set()
     time.sleep(5)
-    server.terminate()
-    server.join()
+    if options.args.multiprocess:
+        server.terminate()
+        server.join()
 
 
 def handle_realtime_trades(broadcastQ, completion_event, options, server):
