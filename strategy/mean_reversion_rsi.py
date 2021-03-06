@@ -3,12 +3,6 @@ import pandas as pd
 from db.storage import StorageHandler
 from db.tradebook import TradeBook
 from strategy.strategy import Strategy
-
-risk_per_trade = 100  # if stoploss gets triggers, you loss will be this, trade quantity will be calculated based on this
-supertrend_period = 30
-supertrend_multiplier = 3
-candlesize = '5minute'
-
 from talipp.indicators import SMA, RSI
 
 
@@ -134,7 +128,7 @@ class RSIMeanReversion(Strategy):
                             "target": setup_details['sell_trigger_limit_price'] * 0.94,
                             "stop_loss": setup_details['sell_trigger_limit_price'] * 1.03,
                         }
-                        print("Order meets the criteria");
+                        print("Order meets the criteria")
                 else:
                     if position["target"] > trading_data['low']:
                         # print("Target meet")

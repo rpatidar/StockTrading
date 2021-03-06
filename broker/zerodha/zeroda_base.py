@@ -127,7 +127,7 @@ class ZerodhaServiceBase(TradingService):
             + str(from_date)
             + "---"
             + str(to_date)
-        )
+        ).replace(" ","_").replace(":","_")
         if os.path.exists(stock_file_name):
             return pickle.load(open(stock_file_name, "rb"))
 
