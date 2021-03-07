@@ -31,19 +31,8 @@ class RSIMeanReversion(Strategy):
         self.starting_amount = 20000
 
     def close_day(self, date, instrument_token, backfill=False):
-
         inst_data = self.instrument_data.get(instrument_token)
-        symbol, exchange = self.tb.get_trading_service().get_symbol_and_exchange(instrument_token)
-        previous_cached_info = self.cache_data.get(instrument_token)
-        if previous_cached_info != None:
-            _, _, position = previous_cached_info
-            if position != None:
-                if position.get("exit_price") == None:
-                    position["exit_price"] = self.days_prices[instrument_token]['close']
-                pl = (position['entry_price'] - position['exit_price']) / position['entry_price'] * 100
-                self.total_pl += pl
-                self.starting_amount += (position['entry_price'] - position['exit_price'] + position['entry_price']) * position["quantity"]
-                print("PL," ,symbol , ",", str(pl),str(self.total_pl), self.starting_amount)
+
         ohlc = self.days_prices[instrument_token]
         #Ignore ADX, not used as of now.
         adx_ohlc = OHLCV(open=ohlc['open'], close=ohlc['close'], high=ohlc['high'], low=ohlc['low'], volume=ohlc['volume'])
@@ -64,6 +53,18 @@ class RSIMeanReversion(Strategy):
 
         inst_data["daygain"] = ((self.days_prices[instrument_token]['close'] - self.days_prices[instrument_token][
             'open']) / self.days_prices[instrument_token]['open']) * 100
+
+        symbol, exchange = self.tb.get_trading_service().get_symbol_and_exchange(instrument_token)
+        previous_cached_info = self.cache_data.get(instrument_token)
+        if previous_cached_info != None:
+            _, _, position = previous_cached_info
+            if backfill == False and position != None:
+                if position.get("exit_price") == None:
+                    position["exit_price"] = self.days_prices[instrument_token]['close']
+                pl = (position['entry_price'] - position['exit_price']) / position['entry_price'] * 100
+                self.total_pl += pl
+                self.starting_amount += (position['entry_price'] - position['exit_price'] + position['entry_price']) * position["quantity"]
+                print("PL," ,symbol , ",", str(pl),str(self.total_pl), self.starting_amount)
 
         # print(inst_data["rsi2"][-1])
         #print(self.days_prices[instrument_token])
@@ -145,7 +146,7 @@ class RSIMeanReversion(Strategy):
                 #         #Invalid setup
                 #         print("Invalid as gap up opening")
                 #         setup_details['setup'] = False
-            if setup_details is not None:
+            if backfill == False and setup_details is not None:
                 factor = 0
                 if position is None:
                     if last_close is not None and setup_details['setup'] and \

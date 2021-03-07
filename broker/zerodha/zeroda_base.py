@@ -112,32 +112,11 @@ class ZerodhaServiceBase(TradingService):
             for d in hist_data:
                 # TODO: Build mechanism to work indpenendent of timezones
                 d["date"] = datetime.datetime.fromtimestamp(d["date"])
-                # d["date"] = (
-                #     datetime.datetime.fromtimestamp(d["date"])
-                #     .replace(tzinfo=pytz.utc)
-                #     .astimezone(tz=pytz.timezone("Asia/Kolkata"))
-                # )
-
-        stock_file_name = (
-            self.tmp_dir
-            + stock_name
-            + "_"
-            + str(instrument_token)
-            + "_"
-            + str(from_date)
-            + "---"
-            + str(to_date)
-        ).replace(" ","_").replace(":","_")
-        if os.path.exists(stock_file_name):
-            return pickle.load(open(stock_file_name, "rb"))
-
+            return hist_data
         else:
             trading_data = self.rate_limited_historical_data_fetch(
                 from_date, instrument_token, to_date
             )
-            filehandler = open(stock_file_name, "wb")
-            pickle.dump(trading_data, filehandler)
-            filehandler.close()
             return trading_data
 
     @on_exception(expo, requests.exceptions.ConnectionError, max_tries=8)
@@ -219,7 +198,7 @@ class ZerodhaServiceBase(TradingService):
                 hour=0, minute=0, second=0, microsecond=0
             )
 
-            start_date = todays_date - timedelta(days=7)
+            start_date = todays_date - timedelta(days=365)
             end_date = todays_date
             logging.info(
                 "Preloading for following stocks:" + str(self.intresting_stocks)

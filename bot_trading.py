@@ -219,6 +219,8 @@ def handle_realtime_trades(broadcastQ, completion_event, options, server):
     tick_data_updater.on_tick_update(publish_to_threads)
     tick_data_updater.init_listening()
     four_pm = get_datetime(16, 00)
+    #Wait, set this to test
+    completion_event.wait()
     while datetime.datetime.now() < four_pm and not completion_event.is_set():
         time.sleep(2)
     if completion_event.is_set():

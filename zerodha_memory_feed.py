@@ -1,15 +1,25 @@
-from kiteconnect import KiteConnect
 import datetime
-from pyalgotrade.bar import BasicBar
-from pyalgotrade.bar import Frequency
+import datetime
+import os
 import pickle
-import json, os
 
 
 def date_ranges(d1_str, d2_str, days=60):
     format_str = '%Y-%m-%d'  # The format
-    d1_date = datetime.datetime.strptime(d1_str, format_str) if type(d1_str) == str  else d1_str
+    d1_date = datetime.datetime.strptime(d1_str, format_str) if type(d1_str) == str else d1_str
     d2_date = datetime.datetime.strptime(d2_str, format_str) if type(d2_str) == str else d2_str
+
+    if type(d1_date) == datetime.date:
+        d1_date = datetime.datetime(
+            year=d1_date.year,
+            month=d1_date.month,
+            day=d1_date.day,
+        )
+        d2_date = datetime.datetime(
+            year=d2_date.year,
+            month=d2_date.month,
+            day=d2_date.day,
+        )
 
     from datetime import timedelta
     diffdays = (d2_date - d1_date).days
@@ -18,7 +28,7 @@ def date_ranges(d1_str, d2_str, days=60):
     first = True
     for r in range(0, diffdays + days, days):
         next_date = min(r, diffdays)
-        if first or next_date > last_start:
+        if first or next_date >= last_start:
             dlist.append(((d1_date + timedelta(days=last_start)).date(), (d1_date + timedelta(days=next_date)).date()))
         last_start = next_date + 1
         first = False
@@ -59,34 +69,68 @@ class ZerodhaFeed:
         if inst is None:
             raise Exception("Can't find instrument : " + stock)
         stock_data = []
+        #Bad way to determine if to cache the last date or not to avoid the crashesh and resumes.
+        #Can fix with some other better Params.
+        last_date_cachable = True
         for dranges in date_ranges(from_date, to_date):
-            print("Downloading:" + str(dranges[0]) + ":" + str(dranges[1]))
-            stock_data.extend(self._local_get_historical_data(stock, dranges, inst))
+
+
+            stock_data.extend(self._local_get_historical_data(stock, dranges, inst,
+                                                              type(to_date) == datetime.datetime and to_date.date() == dranges[1]))
         return stock_data
 
-    def _local_get_historical_data(self, stock, dranges, inst):
-        stock_file_name = self.tmp_dir + stock \
-                          + "_" \
-                          + str(inst) \
-                          + "_" \
-                          + str(dranges[0]) \
-                          + "---" \
-                          + str(dranges[1])
+    def _local_get_historical_data(self, stock, dranges, inst, donot_cache_last_date=False):
 
-        if os.path.exists(stock_file_name):
-            return pickle.load(open(stock_file_name, "rb"))
+        records = []
+        missing_date_index = 0
+        missing = False
+        dates = date_ranges(dranges[0], dranges[1], days=1)
+        for dd in dates:
+            file_path = self.get_single_day_stock_cache_file_name(inst, dd[0], stock)
+            if os.path.exists(file_path):
+                records.extend(pickle.load(open(file_path, "rb")))
+            else:
+                missing = True
+                break
+            missing_date_index += 1
 
-        data = self.kite.historical_data(
+        if missing == False:
+            return records
+
+        print(stock + " Downloading:" + str(dranges[0]) + ":" + str(dranges[1]))
+        records = self.kite.historical_data(
             inst,
             dranges[0],
             dranges[1],
             "minute",
             continuous=False,
             oi=False)
-        filehandler = open(stock_file_name, "wb")
+        date_to_records = {}
+
+        for d in records:
+            date_to_records.setdefault(d['date'].date(), []).append(d)
+
+        for dd in dates:
+            rec = date_to_records.get(dd[0])
+            if rec == None:
+                rec = []
+            if dranges[1] != dd[0] or ( dranges[1] == dd[0] and donot_cache_last_date == False):
+                self.dump_a_day_data_to_file(rec, inst, dd[0], stock)
+
+        return records
+
+    def dump_a_day_data_to_file(self, data, inst, last_date, stock):
+        single_day_stock_file_name = self.get_single_day_stock_cache_file_name(inst, last_date, stock)
+        filehandler = open(single_day_stock_file_name, "wb")
         pickle.dump(data, filehandler)
         filehandler.close()
-        return data
+
+    def get_single_day_stock_cache_file_name(self, inst, last_date, stock):
+        return self.tmp_dir + stock \
+               + "_singleday_" \
+               + str(inst) \
+               + "_" \
+               + str(last_date)
 
     # def get_feed(self, stock, from_date, to_date, exchange="NSE", agg_type="day"):
     #
