@@ -1,21 +1,12 @@
-from kiteconnect import KiteConnect
-from math import floor, ceil
-import datetime
 import pandas as pd
-import numpy as np
-import sys
-import os
-import time
-import pandas as pd
+
+from db.storage import StorageHandler
 from db.tradebook import TradeBook
 from strategy.strategy import Strategy
-import pandas as pd
-from db.storage import StorageHandler
-import talib
 
-risk_per_trade = 100 # if stoploss gets triggers, you loss will be this, trade quantity will be calculated based on this
+risk_per_trade = 100  # if stoploss gets triggers, you loss will be this, trade quantity will be calculated based on this
 supertrend_period = 30
-supertrend_multiplier=3
+supertrend_multiplier = 3
 candlesize = '5minute'
 
 
@@ -31,6 +22,7 @@ class SMACrossOver(Strategy):
         self.invalid_setup = {}
         self.price_data_for_days = 10
         self.total_pl = 0
+
     def close_day(self, date, instrument_token, backfill=False):
         if backfill:
             return
@@ -82,7 +74,7 @@ class SMACrossOver(Strategy):
                 records.extend(stock_history[d])
             df = pd.DataFrame.from_dict(records, orient='columns', dtype=None)
             return df
-            #return records
+            # return records
         return None
 
     def run(self, ticks, timestamp, backfill=False):
@@ -92,17 +84,17 @@ class SMACrossOver(Strategy):
             trading_data = tick_data["ohlc"]
             current_date = tick_data["ohlc"]['date'].date()
             current_minute = tick_data["ohlc"]['date'].replace(second=0, microsecond=0)
-            if self.last_ticks.get(instrument_token) is not None and self.last_ticks.get(instrument_token) == current_minute:
+            if self.last_ticks.get(instrument_token) is not None and self.last_ticks.get(
+                    instrument_token) == current_minute:
                 continue
 
             self.last_ticks[instrument_token] = current_minute
             last_n_ticks = self.get_last_n_days_ticks(instrument_token, last_n_days=5)
             import talib
             if last_n_ticks is None:
-                #print("None..")
+                # print("None..")
                 continue
-            import numpy
-            #print(self.tb.get_trading_service().get_symbol_and_exchange(instrument_token))
+            # print(self.tb.get_trading_service().get_symbol_and_exchange(instrument_token))
             sma = talib.SMA(last_n_ticks['close'].to_numpy(), timeperiod=300)
             sh = StorageHandler()
             stock_history = sh.get_db()[instrument_token]["1minute"]  # self.cache[instrument_token]
@@ -123,11 +115,11 @@ class SMACrossOver(Strategy):
                                                             "stop_loss": None,  # price - stoploss_buy,
                                                             "target": None,  # price + target,
                                                             "entry_timestamp": timestamp}
-                    #print(self.open_position[instrument_token])
+                    # print(self.open_position[instrument_token])
             elif position.get('exit_price') is None:
                 if last_n_ticks.iloc[-2]['close'] < last_sma_value > last_n_ticks.iloc[-1]['close']:
                     position['exit_price'] = current_day_trading_data[-1]['close']
                     p = position['exit_price'] - position['entry_price']
                     self.total_pl = self.total_pl + p
-                    print("Profit/Loss:" + str(self.total_pl) +"," + str(p))
+                    print("Profit/Loss:" + str(self.total_pl) + "," + str(p))
                     self.open_position[instrument_token] = None

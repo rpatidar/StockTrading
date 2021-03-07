@@ -23,7 +23,7 @@ class TradeBook(metaclass=Singleton):
         return self.trading_service
 
     def enter(
-        self, trade_type, instrument_token, date, price, strategy, stragegy_context
+            self, trade_type, instrument_token, date, price, strategy, stragegy_context
     ):
         symbol, exchange = self.trading_service.get_symbol_and_exchange(
             instrument_token
@@ -45,7 +45,7 @@ class TradeBook(metaclass=Singleton):
             )
 
     def exit(
-        self, trade_type, instrument_token, date, price, strategy, stragegy_context
+            self, trade_type, instrument_token, date, price, strategy, stragegy_context
     ):
         symbol, exchange = self.trading_service.get_symbol_and_exchange(
             instrument_token

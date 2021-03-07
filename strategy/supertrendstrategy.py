@@ -1,21 +1,17 @@
-from kiteconnect import KiteConnect
-from math import floor, ceil
-import datetime
-import pandas as pd
-import numpy as np
-import sys
-import os
-import time
+from math import floor
 
+import numpy as np
+import pandas as pd
+
+from db.storage import StorageHandler
 from db.tradebook import TradeBook
 from strategy.strategy import Strategy
-import pandas as pd
-from db.storage import StorageHandler
 
-risk_per_trade = 100 # if stoploss gets triggers, you loss will be this, trade quantity will be calculated based on this
+risk_per_trade = 100  # if stoploss gets triggers, you loss will be this, trade quantity will be calculated based on this
 supertrend_period = 30
-supertrend_multiplier=3
+supertrend_multiplier = 3
 candlesize = '5minute'
+
 
 # Source for tech indicator : https://github.com/arkochhar/Technical-Indicators/blob/master/indicator/indicators.py
 def EMA(df, base, target, period, alpha=False):
@@ -42,6 +38,7 @@ def EMA(df, base, target, period, alpha=False):
 
     df[target].fillna(0, inplace=True)
     return df
+
 
 def ATR(df, period, ohlc=['open', 'high', 'low', 'close']):
     """
@@ -72,6 +69,7 @@ def ATR(df, period, ohlc=['open', 'high', 'low', 'close']):
 
     return df
 
+
 def SuperTrend(df, period=supertrend_period, multiplier=supertrend_multiplier, ohlc=['open', 'high', 'low', 'close']):
     """
     Function to compute SuperTrend
@@ -89,8 +87,8 @@ def SuperTrend(df, period=supertrend_period, multiplier=supertrend_multiplier, o
 
     ATR(df, period, ohlc=ohlc)
     atr = 'ATR_' + str(period)
-    st = 'ST' #+ str(period) + '_' + str(multiplier)
-    stx = 'STX' #  + str(period) + '_' + str(multiplier)
+    st = 'ST'  # + str(period) + '_' + str(multiplier)
+    stx = 'STX'  # + str(period) + '_' + str(multiplier)
 
     """
     SuperTrend Algorithm :
@@ -123,10 +121,10 @@ def SuperTrend(df, period=supertrend_period, multiplier=supertrend_multiplier, o
     for i in range(period, len(df)):
         df['final_ub'].iat[i] = df['basic_ub'].iat[i] if df['basic_ub'].iat[i] < df['final_ub'].iat[i - 1] or \
                                                          df[ohlc[3]].iat[i - 1] > df['final_ub'].iat[i - 1] else \
-        df['final_ub'].iat[i - 1]
+            df['final_ub'].iat[i - 1]
         df['final_lb'].iat[i] = df['basic_lb'].iat[i] if df['basic_lb'].iat[i] > df['final_lb'].iat[i - 1] or \
                                                          df[ohlc[3]].iat[i - 1] < df['final_lb'].iat[i - 1] else \
-        df['final_lb'].iat[i - 1]
+            df['final_lb'].iat[i - 1]
 
     # Set the Supertrend value
     df[st] = 0.00
@@ -149,6 +147,7 @@ def SuperTrend(df, period=supertrend_period, multiplier=supertrend_multiplier, o
     df.fillna(0, inplace=True)
     return df
 
+
 class SuperTrendStrategy(Strategy):
     def __init__(self):
         super(SuperTrendStrategy, self).__init__()
@@ -168,31 +167,33 @@ class SuperTrendStrategy(Strategy):
 
         stock_history = StorageHandler().get_db()[instrument_token]["1minute"]
         last_date = sorted(stock_history.keys())[-1]
-        closing_price =  stock_history[last_date][-1]['close']
+        closing_price = stock_history[last_date][-1]['close']
         position = self.open_position.get(instrument_token)
         if position is not None:
             if position.get('exit_price') is None:
-                #print("Day Closing exit")
+                # print("Day Closing exit")
                 position['exit_price'] = closing_price
                 position['exit_timestamp'] = "DayClosure"
-            tracking_pl= "ABC"
+            tracking_pl = "ABC"
             stock_pl = self.pl.get(tracking_pl)
             if stock_pl == None:
-                stock_pl = {'pl' : 0, 'brokerage': 0}
+                stock_pl = {'pl': 0, 'brokerage': 0}
                 self.pl[tracking_pl] = stock_pl
-            current_pl = (position['exit_price']  - position['entry_price'] ) * position['quantity']
-            current_brokerge =  position['quantity'] * ( position['entry_price'] + position['exit_price'] ) * 0.0004
-            stock_pl['pl']= stock_pl['pl'] + current_pl
+            current_pl = (position['exit_price'] - position['entry_price']) * position['quantity']
+            current_brokerge = position['quantity'] * (position['entry_price'] + position['exit_price']) * 0.0004
+            stock_pl['pl'] = stock_pl['pl'] + current_pl
             stock_pl['brokerage'] = stock_pl['brokerage'] + current_brokerge
-            #print(position)
+            # print(position)
             plfile = open("./pl.csv", "a")
-            plfile.write(str(symbol) + "," + str(position['entry_timestamp']) +"," + str(position['exit_timestamp']) +","+ str(current_pl)  +"," + str(position['quantity'])+","  + str(position['entry_price'])+"," + str(position['exit_price']) +"\n")
+            plfile.write(str(symbol) + "," + str(position['entry_timestamp']) + "," + str(
+                position['exit_timestamp']) + "," + str(current_pl) + "," + str(position['quantity']) + "," + str(
+                position['entry_price']) + "," + str(position['exit_price']) + "\n")
             plfile.close()
             print(stock_pl)
 
         self.last_closing_price[instrument_token] = closing_price
-        #invalid setup
-        #Close
+        # invalid setup
+        # Close
         self.open_position[instrument_token] = None
         self.invalid_setup[instrument_token] = None
 
@@ -206,7 +207,7 @@ class SuperTrendStrategy(Strategy):
                 records.extend(stock_history[d])
             df = pd.DataFrame.from_dict(records, orient='columns', dtype=None)
             if not df.empty:
-                #df = df[['date', 'open', 'high', 'low', 'close', 'volume']]
+                # df = df[['date', 'open', 'high', 'low', 'close', 'volume']]
                 df['date'] = df['date'].astype(str).str[:-6]
                 df['date'] = pd.to_datetime(df['date'])
                 df = SuperTrend(df)
@@ -228,34 +229,35 @@ class SuperTrendStrategy(Strategy):
                 continue
             super_trend = histdata.STX.values
             lastclose = histdata.close.values[-1]
-            stoploss_buy = histdata.low.values[-3] # third last candle as stoploss
-            stoploss_sell = histdata.high.values[-3] # third last candle as stoploss
+            stoploss_buy = histdata.low.values[-3]  # third last candle as stoploss
+            stoploss_sell = histdata.high.values[-3]  # third last candle as stoploss
             # print(histdata)
             # raise Exception("Temp failure")
-            #print(stoploss_buy)
+            # print(stoploss_buy)
             if stoploss_buy > lastclose * 0.996:
-                stoploss_buy = lastclose * 0.996 # minimum stoploss as 0.4 %
+                stoploss_buy = lastclose * 0.996  # minimum stoploss as 0.4 %
 
             if stoploss_sell < lastclose * 1.004:
-                stoploss_sell = lastclose * 1.004 # minimum stoploss as 0.4 %
-            #print("lastclose",lastclose)
-            #print("stoploss abs",stoploss)
-            #print(tickerlist[i],lastclose,super_trend[-4:])
+                stoploss_sell = lastclose * 1.004  # minimum stoploss as 0.4 %
+            # print("lastclose",lastclose)
+            # print("stoploss abs",stoploss)
+            # print(tickerlist[i],lastclose,super_trend[-4:])
             position = self.open_position.get(instrument_token)
             if position is None:
-                if super_trend[-1]=='up' and super_trend[-3]=='down' and super_trend[-4]=='down' and super_trend[-5]=='down' and super_trend[-6]=='down':
+                if super_trend[-1] == 'up' and super_trend[-3] == 'down' and super_trend[-4] == 'down' and super_trend[
+                    -5] == 'down' and super_trend[-6] == 'down':
                     stoploss_buy = lastclose - stoploss_buy
-                    #print("stoploss delta", stoploss)
+                    # print("stoploss delta", stoploss)
 
-                    quantity = floor(max(1, (risk_per_trade/stoploss_buy)))
-                    target = stoploss_buy*3 # risk reward as 3
+                    quantity = floor(max(1, (risk_per_trade / stoploss_buy)))
+                    target = stoploss_buy * 3  # risk reward as 3
 
                     price = int(100 * (floor(lastclose / 0.05) * 0.05)) / 100
                     stoploss_buy = int(100 * (floor(stoploss_buy / 0.05) * 0.05)) / 100
                     quantity = int(quantity)
                     target = int(100 * (floor(target / 0.05) * 0.05)) / 100
 
-                    #print(histdata.to_string())
+                    # print(histdata.to_string())
                     self.open_position[instrument_token] = {"quantity": quantity,
                                                             # This is making a huge differrence, need to close on this.
                                                             "entry_price": price,
@@ -271,8 +273,7 @@ class SuperTrendStrategy(Strategy):
                     print("Closing the position as target met:" + str(position['target']))
                     position['exit_price'] = position['target']
                     position['exit_timestamp'] = timestamp
-                if  current_price < position['stop_loss']:
+                if current_price < position['stop_loss']:
                     print("Closing the position as stoploss hit:" + str(position['target']))
                     position['exit_price'] = position['stop_loss']
                     position['exit_timestamp'] = timestamp
-

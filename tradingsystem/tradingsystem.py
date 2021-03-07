@@ -65,14 +65,14 @@ class TradingSystem(object):
                     last_day_records = []
                     inst_data[trading_date] = last_day_records
                 if len(last_day_records) > 0 and last_day_records[-1]['date'] == agg_datetime:
-                        record = last_day_records[-1]
+                    record = last_day_records[-1]
                 if record is not None:
                     print("Never comes in here")
                     updated_record = self.__get_ohlc(record, ohlc)
                     updated_record['date'] = agg_datetime
                     last_day_records[-1] = updated_record
                 else:
-                    #TODO: Create a deep copy?
+                    # TODO: Create a deep copy?
                     ohlc['date'] = agg_datetime
                     last_day_records.append(ohlc)
 

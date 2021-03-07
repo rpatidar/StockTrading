@@ -56,8 +56,8 @@ class TrendlineStrategy(Strategy):
         tb = TradeBook()
         open_position = tb.get_previous_execution_info(instrument_token)
         if (
-            open_position != None
-            and open_position["execution_info"]["entry_ps"] != None
+                open_position != None
+                and open_position["execution_info"]["entry_ps"] != None
         ):
             pl = close_price - open_position["entry_price"]
             tb.exit("buy", instrument_token, date, close_price, "Trendline", None)
@@ -83,10 +83,10 @@ class TrendlineStrategy(Strategy):
             # the order need to be placed.
             # Alternative is buy at the trade close price.
             if (
-                self.pending_trades.get(instrument_token) != None
-                # and self.pending_trades[instrument_token]['activation'] == False
-                and tick_data["ohlc"]["low"]
-                > self.pending_trades[instrument_token]["input_record"][3]
+                    self.pending_trades.get(instrument_token) != None
+                    # and self.pending_trades[instrument_token]['activation'] == False
+                    and tick_data["ohlc"]["low"]
+                    > self.pending_trades[instrument_token]["input_record"][3]
             ):
                 parms = self.pending_trades[instrument_token]["input_record"]
                 op = {
@@ -165,7 +165,7 @@ class TrendlineStrategy(Strategy):
                 continue
 
             if timestamp > timestamp.replace(
-                hour=15, minute=0, second=0, microsecond=0
+                    hour=15, minute=0, second=0, microsecond=0
             ):
                 continue
 
@@ -190,13 +190,12 @@ class TrendlineStrategy(Strategy):
             # 1. This gets called as soon as the last data point is completed.
             # 2. raw_trading_data[-1]['close']  points to the most recent data point.
             if (
-                open_position_info == None
+                    open_position_info == None
             ):  # or previous_strategy_execution_info['entry_ps'] == None:
                 bug_signal, trend_info = self.execute_strategy_to_check_entry_signal(
                     h, raw_trading_data, tick_data, timestamp
                 )
                 tinfo = {"trend_info": trend_info, "entry_ps": len(h) - 1}
-
 
                 if bug_signal:  # and two_pm_for_day > trade_time:
                     # Very Little bit of approximation  on the points,
@@ -259,9 +258,9 @@ class TrendlineStrategy(Strategy):
         # very critical in avoiding unnecessary losses.
         # TODO: validate adding a Stop Loss on maximum loss can be incurred and run backtest for a 1 year
         current_pl = (
-            (tick_data["ohlc"]["close"] - open_position_info["entry_price"])
-            / open_position_info["entry_price"]
-        ) * 100
+                             (tick_data["ohlc"]["close"] - open_position_info["entry_price"])
+                             / open_position_info["entry_price"]
+                     ) * 100
 
         # if current_pl > 3:
         #     return True, tick_data['ohlc']['close']
@@ -289,12 +288,12 @@ class TrendlineStrategy(Strategy):
         #     }
         #     return False, stop_loss
 
-        if current_pl < 2 and current_pl  > -1 :
+        if current_pl < 2 and current_pl > -1:
             return False, stop_loss
         return True, tick_data["ohlc"]["close"]
 
     def execute_strategy_to_check_entry_signal(
-        self, h, raw_trading_data, tick_data, timestamp
+            self, h, raw_trading_data, tick_data, timestamp
     ):
         """
         minwindows values return following format : [],(X,X,X,X,X,X)
@@ -319,7 +318,7 @@ class TrendlineStrategy(Strategy):
 
                 # Based on the trend how many percentage is changed per data point in the trned?
                 percentage_change_per_data_points = percentage_change / (
-                    trend[0][-1] - trend[0][0]
+                        trend[0][-1] - trend[0][0]
                 )
 
                 # ?
@@ -331,14 +330,14 @@ class TrendlineStrategy(Strategy):
 
                 # Magic number derived based on trial and error
                 if (
-                    percentage_change_per_data_points > 0.080
-                    and slope_percentage > 0.080
+                        percentage_change_per_data_points > 0.080
+                        and slope_percentage > 0.080
                 ):
 
                     # Find the best Slope if there are multiple meeting the condition.
                     if trend_info.get("slope") == None or (
-                        trend_info.get("slope") != None
-                        and trend_info.get("slope") < trend[1][0]
+                            trend_info.get("slope") != None
+                            and trend_info.get("slope") < trend[1][0]
                     ):
                         temp_closing_index = trend[0][-1]
 
@@ -358,14 +357,14 @@ class TrendlineStrategy(Strategy):
                             # Intercept(B)
                             trend_info["coefficient"] = trend[1][1]
                             gap_percentage = 100 * (
-                                (
-                                    tick_data["ohlc"]["close"]
-                                    - (
-                                        (len(h) - 1) * (trend_info["slope"])
-                                        + trend_info["coefficient"]
+                                    (
+                                            tick_data["ohlc"]["close"]
+                                            - (
+                                                    (len(h) - 1) * (trend_info["slope"])
+                                                    + trend_info["coefficient"]
+                                            )
                                     )
-                                )
-                                / h[-1]
+                                    / h[-1]
                             )
                             bug_signal = gap_percentage < 0.4 and gap_percentage > -0.4
                             logging.info(("H=" + str(h)))

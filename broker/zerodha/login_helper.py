@@ -1,6 +1,8 @@
-import kiteconnect
+import datetime
+import os
+
 from kiteconnect import KiteConnect
-import datetime, os
+
 
 # Execute the command
 
@@ -12,8 +14,9 @@ def prerequisite_multiprocess(api_key, api_secret, clean_credential=False):
         return
 
     session_file = "./tmp/session_file"
-    #Uncomment it for testing
-    #return ""
+
+    # Uncomment it for testing
+    # return ""
     def _save_session(token):
         import json
 
@@ -30,8 +33,8 @@ def prerequisite_multiprocess(api_key, api_secret, clean_credential=False):
         session_data = json.load(open(session_file, "r"))
         session_data["lastSessionDate"] = eval(session_data["lastSessionDate"])
         if (
-            session_data["lastSessionDate"] + datetime.timedelta(days=1)
-            > datetime.datetime.now()
+                session_data["lastSessionDate"] + datetime.timedelta(days=1)
+                > datetime.datetime.now()
         ):
             return session_data["token"]
         return None

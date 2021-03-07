@@ -12,14 +12,14 @@ class Strategy:
         pass
 
     def _get_create_or_get_day_history(
-        self,
-        script,
-        timestamp,
-        readonly=True,
-        last_aggregate_date=None,
-        aggregate=None,
-        agg_type=1,
-        last_aggregate_time=None,
+            self,
+            script,
+            timestamp,
+            readonly=True,
+            last_aggregate_date=None,
+            aggregate=None,
+            agg_type=1,
+            last_aggregate_time=None,
     ):
         date = timestamp.date()
 
@@ -38,8 +38,8 @@ class Strategy:
                 date, {"date": date, "trading_data": []}
             )
             if (
-                len(trading_data["trading_data"]) > 0
-                and trading_data["trading_data"][-1]["date"] == last_aggregate_time
+                    len(trading_data["trading_data"]) > 0
+                    and trading_data["trading_data"][-1]["date"] == last_aggregate_time
             ):
                 trading_data["trading_data"][-1] = aggregate
             else:
@@ -143,7 +143,7 @@ class Strategy:
 
     @staticmethod
     def get_simple_day_history(
-        date, instrument_token, last_aggregate_time=None, agg_type=1
+            date, instrument_token, last_aggregate_time=None, agg_type=1
     ):
         sh = StorageHandler()
         full_stock_history = sh.get_db().get(instrument_token, None)

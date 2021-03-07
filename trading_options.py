@@ -30,11 +30,14 @@ class TradingOptions:
         )
 
         self.parser.add_argument(
-            "-m", "--multiprocess", type=bool, help="Multi process to make things fast, it makes debugging difficult", default=False
+            "-m", "--multiprocess", type=bool, help="Multi process to make things fast, it makes debugging difficult",
+            default=False
         )
 
         self.parser.add_argument(
-            "-t", "--tradingstrategy", type=str, help="Trading Strategy [meanreversion,supertrend,openingrangebreakout,smacrossover]", default="meanreversion"
+            "-t", "--tradingstrategy", type=str,
+            help="Trading Strategy [meanreversion,supertrend,openingrangebreakout,smacrossover]",
+            default="meanreversion"
         )
 
         # Execute the parse_args() method

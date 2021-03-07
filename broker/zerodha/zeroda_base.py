@@ -1,12 +1,13 @@
 import datetime
+import multiprocessing as mp
 import os
 import pickle
-import multiprocessing as mp
-from kiteconnect import KiteConnect
-from broker.zerodha.login_helper import prerequisite_multiprocess
 import queue
+
+from kiteconnect import KiteConnect
+
 from broker.trading_base import TradingService
-import pytz
+from broker.zerodha.login_helper import prerequisite_multiprocess
 from messenger.tele_messenger import Messenger
 
 tmp_dir = "tmp/"  # if os.name == "nt" else "/tmp/"
@@ -48,8 +49,8 @@ class ZerodhaServiceBase(TradingService):
         for exchange_name in exchanges:
             for instrument_data in instruments:
                 if (
-                    instrument_data["tradingsymbol"] == stock
-                    and instrument_data["exchange"] == exchange_name
+                        instrument_data["tradingsymbol"] == stock
+                        and instrument_data["exchange"] == exchange_name
                 ):
                     return instrument_data
         return None
@@ -125,7 +126,8 @@ class ZerodhaServiceBase(TradingService):
     @limits(calls=3, period=1)
     def rate_limited_historical_data_fetch(self, from_date, instrument_token, to_date):
         from zerodha_memory_feed import ZerodhaFeed
-        return ZerodhaFeed(kite=self.kite).get_history(self.get_symbol_and_exchange(instrument_token)[0], from_date, to_date)
+        return ZerodhaFeed(kite=self.kite).get_history(self.get_symbol_and_exchange(instrument_token)[0], from_date,
+                                                       to_date)
         # trading_data = self.kite.historical_data(
         #     instrument_token,
         #     from_date,
@@ -137,7 +139,7 @@ class ZerodhaServiceBase(TradingService):
         # return trading_data
 
     def execute_strategy_single_stock_historical(
-        self, instrument_token, stock, stock_config, backfill=False
+            self, instrument_token, stock, stock_config, backfill=False
     ):
         """
         Run trading on the historical data
@@ -160,11 +162,11 @@ class ZerodhaServiceBase(TradingService):
         previous_date = None
         for trade_data in trading_data:
             # Destroying the data immutability, should fix in the right way
-            trade_data["date"] = trade_data["date"]#.replace(tzinfo=None)
+            trade_data["date"] = trade_data["date"]  # .replace(tzinfo=None)
             # ohlc = copy.deepcopy(ohlcp)
             if (
-                previous_date != None
-                and previous_date.date() != trade_data["date"].date()
+                    previous_date != None
+                    and previous_date.date() != trade_data["date"].date()
             ):
                 self.close_day(previous_date, instrument_token)
                 previous_date = trade_data["date"]

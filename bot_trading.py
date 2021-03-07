@@ -1,31 +1,30 @@
-import sys
 import datetime
 import logging
+import multiprocessing as mp
+import sys
+import threading
 import time
+import traceback
 
-from strategy.range_breakout import RangeBreakout
-from strategy.supertrendstrategy import SuperTrendStrategy
-from strategy.sma_crossover import SMACrossOver
-from strategy.mean_reversion_rsi import RSIMeanReversion
-from utility_programs.analyze_summery import generate_summery
 from api.bot_api import api_controller
+from bot_logging.setup_logger import setup_logging
 from broker.indan_stock import get_datetime
+from broker.zerodha.login_helper import prerequisite_multiprocess
+from broker.zerodha.queue_live_trading import QueueBasedServiceOnline
 from broker.zerodha.zeroda_intraday_backtester import ZerodhaServiceIntraDay
 from broker.zerodha.zerodha_live_trading import ZerodhaServiceOnline
 from db.tradebook import TradeBook
-from bot_logging.setup_logger import setup_logging
-from strategy.trendlinestrategy import TrendlineStrategy
+from db.zeroda_live_trading_service import ZerodhaLiveTradingService
+from messenger.tele_messenger import Messenger
+from strategy.mean_reversion_rsi import RSIMeanReversion
+from strategy.range_breakout import RangeBreakout
+from strategy.sma_crossover import SMACrossOver
+from strategy.supertrendstrategy import SuperTrendStrategy
 from trading_options import TradingOptions
 from tradingsystem.tradingsystem import TradingSystem
-import traceback
-from messenger.tele_messenger import Messenger
-from db.zeroda_live_trading_service import ZerodhaLiveTradingService
-from broker.zerodha.queue_live_trading import QueueBasedServiceOnline
-import multiprocessing as mp
-from broker.zerodha.login_helper import prerequisite_multiprocess
-import multiprocessing
+from utility_programs.analyze_summery import generate_summery
 from utils.credential_helper import get_zerodha_credentails
-import threading
+
 credentials = get_zerodha_credentails()
 PROXY = "http://127.0.0.1:6060"
 
@@ -67,7 +66,7 @@ def run(options, start_index, end_index, psnumber, tickQueue, completion_event):
             for s in options.getStocks()[start_index:end_index]
         )
         print(stock_input)
-        #Hard coding to run on NIFTY BANK as space are not supported
+        # Hard coding to run on NIFTY BANK as space are not supported
         # stock_input = {
         #         "NIFTY BANK": {
         #             "from": datetime.datetime.strptime(options.args.start, "%Y-%m-%d"),
@@ -159,7 +158,7 @@ def trigger_childprocess(completion_event, options, process_controller):
     broadcastQ = []
     ps = []
     nstocks = len(options.getStocks())
-    ncpu = 1 #multiprocessing.cpu_count()
+    ncpu = 1  # multiprocessing.cpu_count()
     if ncpu > 1:
         ncpu = ncpu - 1
     steps = int(nstocks / ncpu)
@@ -219,7 +218,7 @@ def handle_realtime_trades(broadcastQ, completion_event, options, server):
     tick_data_updater.on_tick_update(publish_to_threads)
     tick_data_updater.init_listening()
     four_pm = get_datetime(16, 00)
-    #Wait, set this to test
+    # Wait, set this to test
     completion_event.wait()
     while datetime.datetime.now() < four_pm and not completion_event.is_set():
         time.sleep(2)

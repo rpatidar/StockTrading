@@ -1,9 +1,10 @@
 import datetime
 import logging
 import threading
-from bot_logging.setup_logger import setup_logging
+
 from flask import request, render_template
 
+from bot_logging.setup_logger import setup_logging
 from db.zeroda_live_trading_service import ZerodhaLiveTradingService
 
 

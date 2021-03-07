@@ -1,13 +1,15 @@
-import logging
-import sys
-import pandas
-from messenger.tele_messenger import Messenger
-from broker.zerodha.zeroda_base import ZerodhaServiceBase
-import requests
-import json
-import os
 import datetime
+import json
+import logging
+import os
+import sys
+
+import pandas
+import requests
 from tabulate import tabulate
+
+from broker.zerodha.zeroda_base import ZerodhaServiceBase
+from messenger.tele_messenger import Messenger
 
 
 class ZerodhaLiveTradingService(ZerodhaServiceBase):
@@ -32,7 +34,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
         self.open_positions = {}
 
     def enter(
-        self, trade_type, instrument_token, date, price, strategy, strategycontext
+            self, trade_type, instrument_token, date, price, strategy, strategycontext
     ):
         # TODO: move this to the actual class
         if self.proxy:
@@ -105,7 +107,7 @@ class ZerodhaLiveTradingService(ZerodhaServiceBase):
             )
 
     def exit(
-        self, trade_type, instrument_token, date, price, strategy, strategycontext
+            self, trade_type, instrument_token, date, price, strategy, strategycontext
     ):
         if self.proxy:
             r = requests.post(

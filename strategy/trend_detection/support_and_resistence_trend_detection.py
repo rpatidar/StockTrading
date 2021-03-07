@@ -51,7 +51,7 @@ def detect_trend(h, window=30, errpct=1):
         resistances subtracts the series minus the line and eliminate the negatives
         """
         base = trendline[0][0]
-        m, b, ser = trendline[1][0], trendline[1][1], h[base : trendline[0][-1] + 1]
+        m, b, ser = trendline[1][0], trendline[1][1], h[base: trendline[0][-1] + 1]
         return sum(
             [
                 max(0, (m * (x + base) + b) - y if isMin else y - (m * (x + base) + b))
@@ -104,7 +104,7 @@ def detect_trend(h, window=30, errpct=1):
             slopes.append([])
             for y in range(x + 1, len(Idxs)):
                 slope = (h[Idxs[x]] - h[Idxs[y]]) / (
-                    Idxs[x] - Idxs[y]
+                        Idxs[x] - Idxs[y]
                 )  # m=dy/dx #if slope 0 then intercept does not exist constant y where y=b
                 # intercept = h[Idxs[x]] - slope * Idxs[x] #y=mx+b, b=y-mx
                 slopes[x].append((slope, y))
@@ -190,29 +190,30 @@ def detect_trend(h, window=30, errpct=1):
                     x
                     for x in range(len(mom))
                     if func(x)
-                    and (
-                        mom[x] == 0
-                        or (  # either slope is 0, or it crosses from positive to negative with the closer to 0 of the two chosen or prior if a tie
-                            x != len(mom) - 1
-                            and (
-                                mom[x] > 0
-                                and mom[x + 1] < 0
-                                and h[x] >= h[x + 1]
-                                or mom[x] < 0  # mom[x] >= -mom[x+1]
-                                and mom[x + 1] > 0
-                                and h[x] <= h[x + 1]
-                            )
-                            or x != 0  # -mom[x] >= mom[x+1]) or
-                            and (
-                                mom[x - 1] > 0
-                                and mom[x] < 0
-                                and h[x - 1] < h[x]
-                                or mom[x - 1] < 0  # mom[x-1] < -mom[x] or
-                                and mom[x] > 0
-                                and h[x - 1] > h[x]
-                            )
-                        )
-                    )
+                       and (
+                               mom[x] == 0
+                               or (
+                               # either slope is 0, or it crosses from positive to negative with the closer to 0 of the two chosen or prior if a tie
+                                       x != len(mom) - 1
+                                       and (
+                                               mom[x] > 0
+                                               and mom[x + 1] < 0
+                                               and h[x] >= h[x + 1]
+                                               or mom[x] < 0  # mom[x] >= -mom[x+1]
+                                               and mom[x + 1] > 0
+                                               and h[x] <= h[x + 1]
+                                       )
+                                       or x != 0  # -mom[x] >= mom[x+1]) or
+                                       and (
+                                               mom[x - 1] > 0
+                                               and mom[x] < 0
+                                               and h[x - 1] < h[x]
+                                               or mom[x - 1] < 0  # mom[x-1] < -mom[x] or
+                                               and mom[x] > 0
+                                               and h[x - 1] > h[x]
+                                       )
+                               )
+                       )
                 ]  # -mom[x-1] < mom[x])))]
 
             return lambda x: momacc[x] > 0, lambda x: momacc[x] < 0, numdiff_extrema

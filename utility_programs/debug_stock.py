@@ -20,8 +20,8 @@ def get_instrument_id(stockid, exchange):
     instruments = get_instrument()
     for instrument in instruments:
         if (
-            instrument["tradingsymbol"] == stockid
-            and instrument["exchange"] == exchange
+                instrument["tradingsymbol"] == stockid
+                and instrument["exchange"] == exchange
         ):
             return instrument["instrument_token"]
     return None
@@ -29,13 +29,13 @@ def get_instrument_id(stockid, exchange):
 
 def get_historical(stock_name, instrument_token, from_date, to_date):
     chart_cache_name = (
-        stock_name
-        + "_"
-        + str(instrument_token)
-        + "_"
-        + str(from_date)
-        + "---"
-        + str(to_date)
+            stock_name
+            + "_"
+            + str(instrument_token)
+            + "_"
+            + str(from_date)
+            + "---"
+            + str(to_date)
     )
     filehandler = open("./tmp/" + chart_cache_name, "rb")
     stock_data = pickle.load(filehandler)
