@@ -27,9 +27,9 @@ class TradingService:
         for callback in self.callbacks:
             callback(tick_data, timestamp, backfill=backfill)
 
-    def close_day(self, date, instrument_token, backfill=False):
+    def close_day(self, date, instrument_token, backfill=False, execution_info=None):
         for callback in self.day_closure_callbacks:
-            callback(date, instrument_token, backfill=backfill)
+            callback(date, instrument_token, backfill=backfill, execution_info=execution_info)
 
     def shutdown(self):
         self.shutdown_event = True

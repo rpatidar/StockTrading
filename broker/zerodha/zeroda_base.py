@@ -160,6 +160,10 @@ class ZerodhaServiceBase(TradingService):
             stock, instrument_token, from_date, to_date
         )
         previous_date = None
+        trading_dates = set([t['date'].date() for t in trading_data])
+        trading_dates_length = len(trading_dates)
+        reminaing_dates = trading_dates_length -1
+
         for trade_data in trading_data:
             # Destroying the data immutability, should fix in the right way
             trade_data["date"] = trade_data["date"]  # .replace(tzinfo=None)
@@ -168,9 +172,9 @@ class ZerodhaServiceBase(TradingService):
                     previous_date != None
                     and previous_date.date() != trade_data["date"].date()
             ):
-                self.close_day(previous_date, instrument_token)
+                self.close_day(previous_date, instrument_token, execution_info={"reminaing_dates": reminaing_dates})
                 previous_date = trade_data["date"]
-
+                reminaing_dates -= 1
             timestamp = previous_date = trade_data["date"]
             decorated_trading_data = {
                 "instrument_token": instrument_token,
@@ -182,7 +186,7 @@ class ZerodhaServiceBase(TradingService):
                 [decorated_trading_data], timestamp, backfill=backfill
             )
         if previous_date != None:
-            self.close_day(previous_date, instrument_token)
+            self.close_day(previous_date, instrument_token, execution_info={"reminaing_dates": reminaing_dates})
 
     def _url(self, path):
         return self.proxy + path

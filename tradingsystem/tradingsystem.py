@@ -23,9 +23,9 @@ class TradingSystem(object):
         # ohlc_new['volume'] = ohlc1['volume'] + ohlc2['volume']
         return ohlc_new
 
-    def day_closure(self, date, instrument_token, backfill=False):
+    def day_closure(self, date, instrument_token, backfill=False, execution_info = None):
         for strategy in self.stratagies:
-            strategy.close_day(date, instrument_token, backfill=backfill)
+            strategy.close_day(date, instrument_token, backfill=backfill, execution_info=execution_info)
 
     def summery(self):
         for strategy in self.stratagies:

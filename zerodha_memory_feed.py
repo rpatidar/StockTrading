@@ -72,12 +72,10 @@ class ZerodhaFeed:
         # Can fix with some other better Params.
         last_date_cachable = True
         for dranges in date_ranges(from_date, to_date):
-            stock_data.extend(self._local_get_historical_data(stock, dranges, inst,
-                                                              type(to_date) == datetime.datetime and to_date.date() ==
-                                                              dranges[1]))
+            stock_data.extend(self._local_get_historical_data(stock, dranges, inst))
         return stock_data
 
-    def _local_get_historical_data(self, stock, dranges, inst, donot_cache_last_date=False):
+    def _local_get_historical_data(self, stock, dranges, inst):
 
         records = []
         missing_date_index = 0
@@ -112,7 +110,7 @@ class ZerodhaFeed:
             rec = date_to_records.get(dd[0])
             if rec == None:
                 rec = []
-            if dranges[1] != dd[0] or (dranges[1] == dd[0] and donot_cache_last_date == False):
+            if not (dd[1] == datetime.datetime.now().date() and  datetime.datetime.now() > datetime.datetime.now().replace(hour=16, minute=0, second=0)):
                 self.dump_a_day_data_to_file(rec, inst, dd[0], stock)
 
         return records

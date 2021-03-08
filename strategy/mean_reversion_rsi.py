@@ -31,8 +31,13 @@ class RSIMeanReversion(Strategy):
         self.day_ohlc = {}
         self.starting_amount = 20000
 
-    def close_day(self, date, instrument_token, backfill=False):
+    def close_day(self, date, instrument_token, backfill=False, execution_info=None):
         inst_data = self.instrument_data.get(instrument_token)
+
+        is_last_date = False
+        if execution_info is not None and execution_info.get("reminaing_dates") is not None:
+            is_last_date = True if execution_info.get("reminaing_dates") == 1 else False
+
 
         ohlc = self.days_prices[instrument_token]
         # Ignore ADX, not used as of now.
@@ -72,8 +77,8 @@ class RSIMeanReversion(Strategy):
 
         # print(inst_data["rsi2"][-1])
         # print(self.days_prices[instrument_token])
-
-        if len(inst_data["sma200"]) > 0 and inst_data["sma200"][-1] < self.days_prices[instrument_token]['close'] and \
+        #Add following condition to run it for only last trading day "is_last_date == True and"
+        if  len(inst_data["sma200"]) > 0 and inst_data["sma200"][-1] < self.days_prices[instrument_token]['close'] and \
                 inst_data["rsi2"][-1] > 50 and \
                 inst_data['daygain'] > 3:
             # print("Criteria meet on the date:" + str(date))
